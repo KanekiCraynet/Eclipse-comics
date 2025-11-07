@@ -23,22 +23,31 @@ export const useDebounceSearch = (keyword, options = {}) => {
   const abortControllerRef = useRef(null);
   const mountedRef = useRef(true);
 
-  // Debounce keyword
+  // Debounce keyword with optimized timeout handling
   useEffect(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
 
-    timeoutRef.current = setTimeout(() => {
-      setDebouncedKeyword(searchKeyword);
-    }, debounceMs);
+    // Only set timeout if keyword has meaningful length
+    if (searchKeyword.trim().length >= minLength || searchKeyword.trim().length === 0) {
+      timeoutRef.current = setTimeout(() => {
+        setDebouncedKeyword(searchKeyword);
+        timeoutRef.current = null;
+      }, debounceMs);
+    } else {
+      // Clear immediately if keyword is too short
+      setDebouncedKeyword('');
+    }
 
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
     };
-  }, [searchKeyword, debounceMs]);
+  }, [searchKeyword, debounceMs, minLength]);
 
   // Search function
   const performSearch = useCallback(async (searchTerm) => {

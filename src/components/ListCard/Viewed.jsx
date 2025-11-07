@@ -8,11 +8,12 @@ import { KomikCardSkeleton } from "@/components/ui/LoadingSkeleton"
 import { memo } from "react"
 
 const Viewed = () => {
+    // Use same cache key as Recomend component to share data
     const { data, loading, error, refetch } = useKomikcastAPI(
         () => komikcastAPI.getRecommended(),
         {
-            cacheKey: 'komik_recommendation',
-            cacheTTL: 2 * 60 * 1000, // 2 minutes
+            cacheKey: 'komik_recommended', // Share cache with Recomend component
+            cacheTTL: 30 * 60 * 1000, // 30 minutes
             enableCache: true,
         }
     );

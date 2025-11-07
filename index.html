@@ -17,8 +17,20 @@
     <meta name="twitter:title" content="Eclipse - Baca Komik Bahasa Indonesia" />
     <meta name="twitter:description" content="Tempat terbaik untuk membaca komik bahasa Indonesia secara online." />
     <title>Eclipse - Baca Komik Bahasa Indonesia</title>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3543360321520958"
-     crossorigin="anonymous"></script>
+    <script>
+      // Load Google AdSense with error handling
+      (function() {
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3543360321520958';
+        script.crossOrigin = 'anonymous';
+        script.onerror = function() {
+          // Silently handle ad blocker - don't show errors to users
+          console.debug('AdSense script blocked by ad blocker or network issue');
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -8,11 +8,12 @@ import { KomikCardSkeleton } from "@/components/ui/LoadingSkeleton"
 import { memo } from "react"
 
 const Populer = () => {
+    // Use same cache key as Popular component to share data
     const { data, loading, error, refetch } = useKomikcastAPI(
         () => komikcastAPI.getPopular(),
         {
-            cacheKey: 'komik_popular_alt',
-            cacheTTL: 2 * 60 * 1000, // 2 minutes
+            cacheKey: 'komik_popular', // Share cache with Popular component
+            cacheTTL: 30 * 60 * 1000, // 30 minutes
             enableCache: true,
         }
     );

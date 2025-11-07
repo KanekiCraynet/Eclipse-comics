@@ -34,14 +34,17 @@ class APIWrapper {
     // Request interceptor
     this.axiosInstance.interceptors.request.use(
       (config) => {
-        // Log request for debugging
-        if (process.env.NODE_ENV === 'development') {
+        // Only log in development and avoid console spam
+        if (process.env.NODE_ENV === 'development' && !config.url?.includes('/popular') && !config.url?.includes('/recommended')) {
           console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
         }
         return config;
       },
       (error) => {
-        console.error('[API] Request error:', error);
+        // Only log errors, not warnings
+        if (error.response?.status >= 500 || error.isNetworkError) {
+          console.error('[API] Request error:', error);
+        }
         return Promise.reject(error);
       }
     );
@@ -181,9 +184,7 @@ class APIWrapper {
     
     // Check for pending duplicate request
     if (enableDeduplication && requestKey && this.pendingRequests.has(requestKey)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[API] Deduplicating request: ${requestKey}`);
-      }
+      // Silently return pending request without logging to reduce console spam
       return this.pendingRequests.get(requestKey);
     }
     

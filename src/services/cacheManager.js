@@ -10,10 +10,21 @@ class CacheManager {
     this.storagePrefix = options.storagePrefix || 'komikcast_cache_';
     this.storageTimePrefix = options.storageTimePrefix || 'komikcast_cache_time_';
     
-    // Cleanup interval (every 5 minutes)
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+    // Cleanup interval (every 10 minutes to reduce performance impact)
+    // Use requestIdleCallback if available, otherwise use setTimeout with longer interval
+    if (typeof window !== 'undefined' && window.requestIdleCallback) {
+      const scheduleCleanup = () => {
+        window.requestIdleCallback(() => {
+          this.cleanup();
+          setTimeout(scheduleCleanup, 10 * 60 * 1000);
+        }, { timeout: 10 * 60 * 1000 });
+      };
+      scheduleCleanup();
+    } else {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanup();
+      }, 10 * 60 * 1000);
+    }
   }
   
   /**
@@ -272,19 +283,26 @@ class CacheManager {
   
   /**
    * Cleanup expired entries
+   * Optimized to run during idle time to avoid blocking main thread
    */
   cleanup() {
     const now = Date.now();
+    let cleanedCount = 0;
     
-    // Clean memory cache
+    // Clean memory cache (limit iterations to avoid blocking)
+    const maxIterations = 20;
+    let iterations = 0;
     for (const [key, entry] of this.memoryCache.entries()) {
+      if (iterations >= maxIterations) break;
       if (entry.expiresAt && now > entry.expiresAt) {
         this.memoryCache.delete(key);
+        cleanedCount++;
       }
+      iterations++;
     }
     
-    // Clean localStorage (only check every 10th cleanup to avoid performance issues)
-    if (Math.random() < 0.1) {
+    // Clean localStorage less frequently (only check every 5th cleanup to avoid performance issues)
+    if (Math.random() < 0.2) {
       this.clearOldLocalStorageEntries();
     }
   }
