@@ -6,11 +6,11 @@ import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
 import { memo } from "react"
 
 const Update = () => {
-    // Use same cache key as Popular component to share data
+    // Use getTerbaru() for latest comics, not getPopular()
     const { data, loading, error, refetch } = useKomikcastAPI(
-        () => komikcastAPI.getPopular(),
+        () => komikcastAPI.getTerbaru(1),
         {
-            cacheKey: 'komik_popular', // Share cache with Popular component
+            cacheKey: 'komik_terbaru',
             cacheTTL: 30 * 60 * 1000, // 30 minutes
             enableCache: true,
         }

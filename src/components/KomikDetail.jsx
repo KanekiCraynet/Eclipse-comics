@@ -28,39 +28,8 @@ const KomikDetail = () => {
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
 
+  // Check bookmark status with safe JSON parsing
   useEffect(() => {
-    const loadCommentBox = async () => {
-      try {
-        if (!scriptRef.current) {
-          scriptRef.current = document.createElement("script");
-          scriptRef.current.src = "https://unpkg.com/commentbox.io/dist/commentBox.min.js";
-          scriptRef.current.async = true;
-          scriptRef.current.onerror = () => {
-            console.error("Failed to load CommentBox script");
-          };
-          document.body.appendChild(scriptRef.current);
-
-          await new Promise((resolve, reject) => {
-            scriptRef.current.onload = resolve;
-            scriptRef.current.onerror = reject;
-          });
-        }
-
-        if (window.commentBox) {
-          commentBoxRef.current = window.commentBox('5660104556806144-proj', {
-            className: 'commentbox',
-            defaultBoxId: `${komik}`,
-            textColor: 'white',
-          });
-        }
-      } catch (error) {
-        console.error("Error initializing CommentBox:", error);
-      }
-    };
-
-    loadCommentBox();
-
-    // Check bookmark status with safe JSON parsing
     if (data?.title) {
       try {
         const checkBookmark = getJSONItem("bookmarkKomik", []);
@@ -72,8 +41,95 @@ const KomikDetail = () => {
         setIsBookmark(false);
       }
     }
+  }, [data]);
+
+  // Defer CommentBox loading to improve initial page performance
+  useEffect(() => {
+    let timeoutId;
+    let idleCallbackId;
+    
+    const loadCommentBox = async () => {
+      try {
+        // Wait for page to be fully loaded before loading CommentBox
+        if (document.readyState === 'loading') {
+          await new Promise((resolve) => {
+            if (document.readyState === 'complete') {
+              resolve();
+            } else {
+              document.addEventListener('DOMContentLoaded', resolve, { once: true });
+            }
+          });
+        }
+
+        // Additional delay to prevent blocking main thread
+        await new Promise((resolve) => {
+          timeoutId = setTimeout(resolve, 500);
+        });
+
+        if (!scriptRef.current) {
+          scriptRef.current = document.createElement("script");
+          scriptRef.current.src = "https://unpkg.com/commentbox.io/dist/commentBox.min.js";
+          scriptRef.current.async = true;
+          scriptRef.current.defer = true;
+          scriptRef.current.onerror = () => {
+            console.error("Failed to load CommentBox script");
+          };
+          document.body.appendChild(scriptRef.current);
+
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error("CommentBox script load timeout"));
+            }, 10000);
+            
+            scriptRef.current.onload = () => {
+              clearTimeout(timeout);
+              resolve();
+            };
+            scriptRef.current.onerror = (error) => {
+              clearTimeout(timeout);
+              reject(error);
+            };
+          });
+        }
+
+        // Use requestIdleCallback if available for better performance
+        const initCommentBox = () => {
+          if (window.commentBox) {
+            try {
+              commentBoxRef.current = window.commentBox('5660104556806144-proj', {
+                className: 'commentbox',
+                defaultBoxId: `${komik}`,
+                textColor: 'white',
+              });
+            } catch (error) {
+              console.error("Error initializing CommentBox:", error);
+            }
+          }
+        };
+
+        if (window.requestIdleCallback) {
+          idleCallbackId = window.requestIdleCallback(initCommentBox, { timeout: 2000 });
+        } else {
+          idleCallbackId = setTimeout(initCommentBox, 100);
+        }
+      } catch (error) {
+        console.error("Error loading CommentBox:", error);
+      }
+    };
+
+    loadCommentBox();
 
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (idleCallbackId) {
+        if (window.cancelIdleCallback) {
+          window.cancelIdleCallback(idleCallbackId);
+        } else {
+          clearTimeout(idleCallbackId);
+        }
+      }
       if (commentBoxRef.current) {
         try {
           commentBoxRef.current.destroy();
@@ -83,7 +139,7 @@ const KomikDetail = () => {
         }
       }
     };
-  }, [komik, data]);
+  }, [komik]);
 
   if (loading) {
     return <KomikDetailSkeleton />;

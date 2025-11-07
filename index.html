@@ -20,15 +20,24 @@
     <script>
       // Load Google AdSense with error handling
       (function() {
-        const script = document.createElement('script');
-        script.async = true;
-        script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3543360321520958';
-        script.crossOrigin = 'anonymous';
-        script.onerror = function() {
-          // Silently handle ad blocker - don't show errors to users
-          console.debug('AdSense script blocked by ad blocker or network issue');
-        };
-        document.head.appendChild(script);
+        try {
+          const script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3543360321520958';
+          script.crossOrigin = 'anonymous';
+          script.onerror = function() {
+            // Silently handle ad blocker - don't show errors to users
+            // This is expected behavior when ad blockers are active
+          };
+          // Suppress network errors for AdSense in console
+          script.addEventListener('error', function(e) {
+            e.stopPropagation();
+          }, true);
+          document.head.appendChild(script);
+        } catch (error) {
+          // Silently handle any errors during script creation
+          // This is expected when ad blockers interfere
+        }
       })();
     </script>
   </head>

@@ -2,7 +2,6 @@ import Recomend from "@/components/ListCard/Recomend"
 import Update from "@/components/ListCard/Update"
 import Popular from "@/components/ListCard/Popular"
 import GenreList from "@/components/ListCard/GenreList"
-import Populer from "@/components/ListCard/Populer"
 import Viewed from "@/components/ListCard/Viewed"
 import mY from "@/assets/20250128_230226.png"
 
@@ -19,7 +18,6 @@ const KomikList = () => {
             <Update />
             <Popular />
             <GenreList />
-            <Populer />
             <Viewed />
         </div>
     )
