@@ -1,19 +1,28 @@
+import React from "react"
 import { NavLink } from "react-router-dom"
-import { useFetch } from "@/libs/api-libs"
+import { useKomikcastAPI } from "@/hooks/useKomikcastAPI"
+import { komikcastAPI } from "@/services/api"
 import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { FaStar } from "react-icons/fa6"
-import { memo, useMemo } from "react"
+import { KomikCardSkeleton } from "@/components/ui/LoadingSkeleton"
+import { memo } from "react"
 
 const Populer = () => {
-    const options = useMemo(() => ({
-        cacheKey: 'manhwa-popular',
-        cacheExpiry: 2 * 60 * 1000 // 2 minutes
-    }), []);
-
-    const { data, loading, error, retry } = useFetch('popular', options);
+    const { data, loading, error, refetch } = useKomikcastAPI(
+        () => komikcastAPI.getPopular(),
+        {
+            cacheKey: 'komik_popular_alt',
+            cacheTTL: 2 * 60 * 1000, // 2 minutes
+            enableCache: true,
+        }
+    );
 
     if (loading) {
-        return <div></div>
+        return (
+            <div className="p-2">
+                <KomikCardSkeleton count={5} />
+            </div>
+        )
     }
 
     if (error) {
@@ -21,13 +30,15 @@ const Populer = () => {
             <div className="p-2">
                 <span className="py-2 text-2xl font-extrabold">Komik Populer</span>
                 <div className="flex items-center justify-center py-4">
-                    <p className="text-red-500 text-center mb-2">{error}</p>
-                    <button
-                        onClick={retry}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
-                    >
-                        Try Again
-                    </button>
+                    <div className="text-center">
+                        <p className="text-red-500 text-center mb-2">{error}</p>
+                        <button
+                            onClick={refetch}
+                            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        >
+                            Coba Lagi
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -43,9 +54,9 @@ const Populer = () => {
             <div className="flex items-center scroll-page gap-2 py-2">
                 {data.map((komik, index) => {
                     const title = komik.title || 'Untitled';
-                    const thumbnail = safeImageUrl(komik.imageSrc || komik.image);
-                    const endpoint = safeEndpoint(komik.link || komik.endpoint);
-                    const rating = komik.rating || '0';
+                    const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
+                    const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
+                    const rating = String(komik.rating || '0');
                     const chapter = komik.chapter || komik.latestChapter || 'N/A';
 
                     return (
@@ -58,7 +69,7 @@ const Populer = () => {
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {chapter.replace("Chapter", "").trim()}</span>
+                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {String(chapter).replace("Chapter", "").trim()}</span>
                             <div className="absolute bottom-0 left-0 p-1">
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-1">

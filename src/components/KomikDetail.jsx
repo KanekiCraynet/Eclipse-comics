@@ -1,15 +1,32 @@
 import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
-import useAnimeResponse from "@/libs/api-libs";
+import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
+import { komikcastAPI } from "@/services/api";
+import { getJSONItem, setJSONItem } from "@/utils/storageHelpers";
+import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
 import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
-import Loading from "@/components/Loading";
+import { KomikDetailSkeleton } from "@/components/ui/LoadingSkeleton";
+import LazyImage from "@/components/ui/LazyImage";
 
 const KomikDetail = () => {
   const [isBookmark, setIsBookmark] = useState(false);
   const navigate = useNavigate();
   const { komik } = useParams();
-  const { data, loading, error } = useAnimeResponse(`detail/${komik}`) || {};
+  
+  // Use unified hook with caching
+  const { data: responseData, loading, error, refetch } = useKomikcastAPI(
+    () => komikcastAPI.getDetail(komik),
+    {
+      cacheKey: `komik_detail_${komik}`,
+      cacheTTL: 30 * 60 * 1000, // 30 minutes
+      enableCache: true,
+    }
+  );
+  
+  // Extract data from response
+  const data = responseData?.data || responseData;
+  
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
 
@@ -45,10 +62,17 @@ const KomikDetail = () => {
 
     loadCommentBox();
 
-    if (data?.data) {
-      const checkBookmark = JSON.parse(localStorage.getItem("bookmarkKomik")) || [];
-      const isBookmarked = checkBookmark.some((komik) => komik.title === data.data.title);
-      setIsBookmark(isBookmarked);
+    // Check bookmark status with safe JSON parsing
+    if (data?.title) {
+      try {
+        const checkBookmark = getJSONItem("bookmarkKomik", []);
+        const isBookmarked = Array.isArray(checkBookmark) && 
+          checkBookmark.some((item) => item?.title === data.title);
+        setIsBookmark(isBookmarked);
+      } catch (error) {
+        console.error("Error checking bookmark:", error);
+        setIsBookmark(false);
+      }
     }
 
     return () => {
@@ -64,15 +88,21 @@ const KomikDetail = () => {
   }, [komik, data]);
 
   if (loading) {
-    return <Loading />;
+    return <KomikDetailSkeleton />;
   }
 
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-500 mb-2">Failed to load comic details</p>
-          <p className="text-gray-500 text-sm">{error}</p>
+          <p className="text-red-500 mb-2">Gagal memuat detail komik</p>
+          <p className="text-gray-500 text-sm mb-4">{error}</p>
+          <button
+            onClick={refetch}
+            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+          >
+            Coba Lagi
+          </button>
         </div>
       </div>
     );
@@ -81,24 +111,25 @@ const KomikDetail = () => {
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Comic not found</p>
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">Komik tidak ditemukan</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+          >
+            Kembali
+          </button>
+        </div>
       </div>
     );
   }
 
-  const angka = data?.data?.chapter?.length || 0;
+  const chapterCount = Array.isArray(data?.chapter) ? data.chapter.length : 0;
 
   // Fallback image when API thumbnail is missing or relative
   const DEFAULT_THUMBNAIL = "https://files.catbox.moe/hu8n6y.jpg";
   const getThumbnailUrl = (thumb) => {
-    if (!thumb) return DEFAULT_THUMBNAIL;
-    try {
-      // If it's an absolute URL, use it; otherwise use default
-      const isAbsolute = /^https?:\/\//i.test(thumb);
-      return isAbsolute ? thumb : DEFAULT_THUMBNAIL;
-    } catch {
-      return DEFAULT_THUMBNAIL;
-    }
+    return safeImageUrl(thumb, DEFAULT_THUMBNAIL);
   };
 
   const getRandomNumber = (min, max) => {
@@ -106,16 +137,26 @@ const KomikDetail = () => {
   };
 
   const handleBookmark = () => {
-    const bookmarkKomik = JSON.parse(localStorage.getItem("bookmarkKomik")) || [];
-    if (isBookmark) {
-      const removeBookmark = bookmarkKomik.filter(komik => komik.title !== data.data.title);
-      localStorage.setItem("bookmarkKomik", JSON.stringify(removeBookmark));
-      setIsBookmark(false);
-    } else {
-      const updatedData = { ...data.data, link: komik };
-      bookmarkKomik.push(updatedData);
-      localStorage.setItem("bookmarkKomik", JSON.stringify(bookmarkKomik));
-      setIsBookmark(true);
+    try {
+      const bookmarkKomik = getJSONItem("bookmarkKomik", []);
+      
+      if (!Array.isArray(bookmarkKomik)) {
+        console.error("Bookmark data is not an array");
+        return;
+      }
+      
+      if (isBookmark) {
+        const removeBookmark = bookmarkKomik.filter(item => item?.title !== data?.title);
+        setJSONItem("bookmarkKomik", removeBookmark);
+        setIsBookmark(false);
+      } else {
+        const updatedData = { ...data, link: komik };
+        const newBookmarks = [...bookmarkKomik, updatedData];
+        setJSONItem("bookmarkKomik", newBookmarks);
+        setIsBookmark(true);
+      }
+    } catch (error) {
+      console.error("Error handling bookmark:", error);
     }
   };
 
@@ -137,51 +178,55 @@ const KomikDetail = () => {
     }
   };
 
+  const thumbnailUrl = getThumbnailUrl(data?.thumbnail);
+  const title = data?.title?.replace("Bahasa Indonesia", "") || "Untitled";
+  const chapters = Array.isArray(data?.chapter) ? data.chapter : [];
+
   return (
     <div>
       <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-2">
-        <img
+        <LazyImage
           className="absolute top-0 w-screen h-52 blur-2xl"
-          src={getThumbnailUrl(data?.data?.thumbnail)}
-          alt={`${data?.data?.title || 'thumbnail'} background`}
-          onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_THUMBNAIL; }}
+          src={thumbnailUrl}
+          alt={`${title} background`}
+          loading="eager"
         />
-        <button className="absolute top-2 left-3" onClick={() => navigate(-1)}>
+        <button className="absolute top-2 left-3 z-10" onClick={() => navigate(-1)}>
           <FaArrowLeft className="text-xl" />
         </button>
-        <div className="w-1/3">
-          <img
+        <div className="w-1/3 relative z-10">
+          <LazyImage
             className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden"
-            src={getThumbnailUrl(data?.data?.thumbnail)}
-            alt={data?.data?.title || 'komik thumbnail'}
-            onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_THUMBNAIL; }}
+            src={thumbnailUrl}
+            alt={`${title} thumbnail`}
+            loading="eager"
           />
         </div>
-        <span className="relative text-3xl font-extrabold">{data.data.title.replace("Bahasa Indonesia", "")}</span>
+        <span className="relative text-3xl font-extrabold z-10">{title}</span>
       </div>
       <div className="flex items-center gap-1 pl-3 pb-3">
         <IoMdEye className="text-sm" />
-        <span className="text-xs">{(data?.data?.chapter || []).length} Chapters</span>
+        <span className="text-xs">{chapterCount} Chapters</span>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaCalendarDays className="text-sm text-white" />
-          <span>{data.data.released}</span>
+          <span>{data?.released || "Unknown"}</span>
         </div>
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaUser className="text-sm text-white" />
-          <span>{data.data.author}</span>
+          <span>{data?.author || "Unknown"}</span>
         </div>
 
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaStar className="text-sm text-yellow-300" />
-          <span>{data?.data?.rating ?? "N/A"}</span>
+          <span>{data?.rating ?? "N/A"}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
-        {(data?.data?.genre || []).map((genre, index) => (
+        {(Array.isArray(data?.genre) ? data.genre : []).map((genre, index) => (
           <div className="text-sm bg-[#212121] px-3.5 py-1 rounded-full" key={index}>
-            {genre.title}
+            {genre?.title || genre}
           </div>
         ))}
       </div>
@@ -211,34 +256,36 @@ const KomikDetail = () => {
           <span className="text-lg font-semibold">Bagikan</span>
         </button>
       </div>
-      <p className="text-sm px-3">{data.data.description}</p>
+      <p className="text-sm px-3">{data?.description || "No description available"}</p>
 
       {/* Chapter List */}
       <div className="p-2">
         <span className="py-2 text-2xl font-extrabold">Chapter List :</span>
       </div>
       <div className="container max-h-[250px] flex flex-col overflow-y-auto gap-1 rounded-md p-2">
-        {(data?.data?.chapter || []).map((chapter, index) => {
-          const randomNumber = getRandomNumber(1, Math.max(1, angka));
-          return (
-            <div className="mt-1" key={index}>
-              <div className="flex items-center gap-1 pb-1 pl-1">
-                <IoMdEye className="text-sm" />
-                <span className="text-xs">{randomNumber}</span>
+        {chapters.length > 0 ? (
+          chapters.map((chapter, index) => {
+            const chapterEndpoint = safeEndpoint(chapter?.href || chapter?.url || "", "");
+            return (
+              <div className="mt-1" key={index}>
+                <NavLink
+                  className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-bl-3xl rounded-tr-3xl hover:bg-[#171717]"
+                  to={`/chapter/${chapterEndpoint}`}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-bold">{chapter?.title || `Chapter ${index + 1}`}</span>
+                    <span className="text-sm">{chapter?.date || ""}</span>
+                  </div>
+                  <FaReadme className="text-1xl" />
+                </NavLink>
               </div>
-              <NavLink
-                className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-bl-3xl rounded-tr-3xl"
-                to={`/chapter/${(chapter?.href || "").split("/")[1] || ""}`}
-              >
-                <div className="flex flex-col">
-                  <span className="font-bold">{chapter.title}</span>
-                  <span className="text-sm">{chapter.date}</span>
-                </div>
-                <FaReadme className="text-1xl" />
-              </NavLink>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="text-center text-gray-500 py-4">
+            <p>No chapters available</p>
+          </div>
+        )}
       </div>
 
       {/* Comments Section moved below Chapter List */}

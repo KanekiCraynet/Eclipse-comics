@@ -1,8 +1,14 @@
-// hooks/useFetch.js
+/**
+ * @deprecated This hook is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.
+ * This hook is kept for backward compatibility only and will be removed in a future version.
+ * 
+ * hooks/useFetch.js
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { validateApiResponse } from '../utils/apiHelpers';
 
 export const useFetch = (apiFunction) => {
+  console.warn('[DEPRECATED] useFetch from hooks/useFetch.js is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

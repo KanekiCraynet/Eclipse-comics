@@ -67,8 +67,13 @@ const useFetch = (route, options = {}) => {
     return { data, loading, error, retry }
 }
 
-// Keep old hook for backward compatibility, but mark as deprecated
+/**
+ * @deprecated This hook is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.
+ * This hook is kept for backward compatibility only and will be removed in a future version.
+ */
 const useAnimeResponse = (route) => {
+    console.warn('[DEPRECATED] useAnimeResponse is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.');
+    
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -94,5 +99,14 @@ const useAnimeResponse = (route) => {
     return { data, loading, error }
 }
 
+/**
+ * @deprecated This hook is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.
+ * This hook is kept for backward compatibility only and will be removed in a future version.
+ */
 export default useAnimeResponse
+
+/**
+ * @deprecated This hook is deprecated. Use useKomikcastAPI from @/hooks/useKomikcastAPI instead.
+ * This hook is kept for backward compatibility only and will be removed in a future version.
+ */
 export { useFetch }

@@ -1,37 +1,137 @@
-import axios from 'axios';
+import APIWrapper from './apiWrapper';
+import {
+  validateEndpoint,
+  validateKeyword,
+  validateGenre,
+  validatePage,
+} from '../utils/apiHelpers';
 
 const BASE_URL = 'https://api-komikcast.vercel.app';
 
-const api = axios.create({
-  baseURL: BASE_URL,
+// Create API wrapper instance with retry logic and deduplication
+const apiWrapper = new APIWrapper(BASE_URL, {
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  retries: 3,
+  retryDelay: 1000,
 });
 
-// Response interceptor untuk handle error global
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error.response?.status, error.config?.url);
-    return Promise.reject(error);
-  }
-);
-
-// API Methods (SESUAI DOKUMENTASI)
+// API Methods with parameter validation and error handling
 export const komikcastAPI = {
-  // ✅ Available endpoints
-  getRecommended: () => api.get('/recommended'),
-  getPopular: () => api.get('/popular'),
-  getDetail: (endpoint) => api.get(`/detail/${endpoint}`),
-  search: (keyword) => api.get('/search', { params: { keyword } }),
-  readChapter: (endpoint) => api.get(`/read/${endpoint}`),
-  getGenres: () => api.get('/genre'),
-  getGenreComics: (genre, page = 1) => api.get(`/genre/${genre}`, { params: { page } }),
+  /**
+   * Get recommended comics
+   */
+  getRecommended: (options = {}) => {
+    return apiWrapper.get('/recommended', {}, {
+      ...options,
+      enableDeduplication: true,
+    });
+  },
 
-  // ❌ REMOVED - tidak ada di dokumentasi
-  // getOngoing: () => api.get('/ongoing'), // HAPUS INI
+  /**
+   * Get popular comics
+   */
+  getPopular: (options = {}) => {
+    return apiWrapper.get('/popular', {}, {
+      ...options,
+      enableDeduplication: true,
+    });
+  },
+
+  /**
+   * Get newest comics (terbaru) with pagination
+   */
+  getTerbaru: (page = 1, options = {}) => {
+    try {
+      const validatedPage = validatePage(page);
+      return apiWrapper.get('/terbaru', {
+        params: { page: validatedPage },
+      }, {
+        ...options,
+        enableDeduplication: true,
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  /**
+   * Get komik detail by endpoint
+   */
+  getDetail: (endpoint, options = {}) => {
+    try {
+      const validatedEndpoint = validateEndpoint(endpoint);
+      return apiWrapper.get(`/detail/${validatedEndpoint}`, {}, {
+        ...options,
+        enableDeduplication: true,
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  /**
+   * Search comics by keyword
+   */
+  search: (keyword, options = {}) => {
+    try {
+      const validatedKeyword = validateKeyword(keyword);
+      return apiWrapper.get('/search', {
+        params: { keyword: validatedKeyword },
+      }, {
+        ...options,
+        enableDeduplication: true,
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  /**
+   * Read chapter by endpoint
+   */
+  readChapter: (endpoint, options = {}) => {
+    try {
+      const validatedEndpoint = validateEndpoint(endpoint);
+      return apiWrapper.get(`/read/${validatedEndpoint}`, {}, {
+        ...options,
+        enableDeduplication: true,
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
+
+  /**
+   * Get all genres
+   */
+  getGenres: (options = {}) => {
+    return apiWrapper.get('/genre', {}, {
+      ...options,
+      enableDeduplication: true,
+    });
+  },
+
+  /**
+   * Get comics by genre with pagination
+   */
+  getGenreComics: (genre, page = 1, options = {}) => {
+    try {
+      const validatedGenre = validateGenre(genre);
+      const validatedPage = validatePage(page);
+      return apiWrapper.get(`/genre/${validatedGenre}`, {
+        params: { page: validatedPage },
+      }, {
+        ...options,
+        enableDeduplication: true,
+      });
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  },
 };
 
-export default api;
+// Export wrapper for advanced usage
+export { apiWrapper };
+
+// Export default for backward compatibility (deprecated)
+export default apiWrapper.axiosInstance;
