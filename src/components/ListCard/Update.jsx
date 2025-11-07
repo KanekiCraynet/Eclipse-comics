@@ -1,10 +1,8 @@
-import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI"
 import { komikcastAPI } from "@/services/api"
-import { safeStringTrim, safeImageUrl, safeEndpoint, extractChapter, extractRating } from "@/utils/apiHelpers"
+import { safeStringTrim, safeImageUrl, safeEndpoint, extractChapter } from "@/utils/apiHelpers"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
-import LazyImage from "@/components/ui/LazyImage"
 import { memo } from "react"
 
 const Update = () => {

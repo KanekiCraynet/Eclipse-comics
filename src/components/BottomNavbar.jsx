@@ -1,4 +1,3 @@
-import React from "react"
 import { NavLink } from "react-router-dom"
 import { FaHome,FaSearch,FaHistory } from "react-icons/fa"
 import { FaBookmark,FaCircleInfo } from "react-icons/fa6"

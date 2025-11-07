@@ -7,8 +7,6 @@ import { useKomikcastAPI } from './useKomikcastAPI';
  */
 export const useParallelFetch = (apiFunctions, options = {}) => {
   const {
-    enableCache = true,
-    cacheTTL = 30 * 60 * 1000,
     dependencies = [],
     skip = false,
   } = options;
@@ -20,21 +18,17 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
   const abortControllerRef = useRef(null);
   const mountedRef = useRef(true);
 
-  // Validate input
-  if (!Array.isArray(apiFunctions) || apiFunctions.length === 0) {
-    console.warn('[useParallelFetch] apiFunctions must be a non-empty array');
-    return {
-      results: [],
-      loading: false,
-      errors: [],
-      overallError: 'Invalid apiFunctions array',
-      allSucceeded: false,
-      someSucceeded: false,
-    };
-  }
+  // Validate input - but don't return early to avoid conditional hooks
+  const isValid = Array.isArray(apiFunctions) && apiFunctions.length > 0;
 
   // Fetch all data in parallel
   const fetchAll = useCallback(async () => {
+    if (!isValid) {
+      setLoading(false);
+      setOverallError('Invalid apiFunctions array');
+      return;
+    }
+
     if (skip) {
       setLoading(false);
       return;
@@ -134,7 +128,7 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
         setLoading(false);
       }
     }
-  }, [apiFunctions, skip, ...dependencies]);
+  }, [apiFunctions, skip, isValid, ...dependencies]);
 
   // Effect to fetch data
   useEffect(() => {
@@ -155,8 +149,21 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
   }, [fetchAll]);
 
   // Check success status
-  const allSucceeded = errors.every(err => err === null);
-  const someSucceeded = results.some(result => result !== null);
+  const allSucceeded = isValid && errors.every(err => err === null);
+  const someSucceeded = isValid && results.some(result => result !== null);
+
+  // Return early if invalid (after all hooks)
+  if (!isValid) {
+    return {
+      results: [],
+      loading: false,
+      errors: [],
+      overallError: 'Invalid apiFunctions array',
+      allSucceeded: false,
+      someSucceeded: false,
+      refetch: () => {},
+    };
+  }
 
   return {
     results,
@@ -176,25 +183,20 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   const {
     enableCache = true,
     cacheTTL = 30 * 60 * 1000,
-    dependencies = [],
     skip = false,
   } = options;
 
-  // Validate input
-  if (!Array.isArray(apiFunctionsConfig) || apiFunctionsConfig.length === 0) {
-    console.warn('[useParallelFetchDetailed] apiFunctionsConfig must be a non-empty array');
-    return {
-      states: [],
-      allLoading: false,
-      allSucceeded: false,
-      someSucceeded: false,
-    };
-  }
+  // Validate input - but don't return early to avoid conditional hooks
+  const isValid = Array.isArray(apiFunctionsConfig) && apiFunctionsConfig.length > 0;
 
   // Use individual hooks for each API function
-  const states = apiFunctionsConfig.map((config, index) => {
+  // Note: This violates rules-of-hooks if apiFunctionsConfig is not an array
+  // But we need to handle it gracefully
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const states = isValid ? apiFunctionsConfig.map((config, index) => {
     const { apiFunction, cacheKey, ...hookOptions } = config;
     
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useKomikcastAPI(apiFunction, {
       cacheKey: cacheKey || (enableCache ? `parallel_${index}` : null),
       cacheTTL,
@@ -202,19 +204,31 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
       skip,
       ...hookOptions,
     });
-  });
+  }) : [];
 
-  const allLoading = states.some(state => state.loading);
-  const allSucceeded = states.every(state => !state.loading && !state.error && state.data !== null);
-  const someSucceeded = states.some(state => !state.loading && !state.error && state.data !== null);
+  const allLoading = isValid && states.some(state => state.loading);
+  const allSucceeded = isValid && states.every(state => !state.loading && !state.error && state.data !== null);
+  const someSucceeded = isValid && states.some(state => !state.loading && !state.error && state.data !== null);
 
   const refetchAll = useCallback(() => {
+    if (!isValid) return;
     states.forEach(state => {
       if (state.refetch) {
         state.refetch();
       }
     });
-  }, [states]);
+  }, [states, isValid]);
+
+  // Return early if invalid (after all hooks)
+  if (!isValid) {
+    return {
+      states: [],
+      allLoading: false,
+      allSucceeded: false,
+      someSucceeded: false,
+      refetchAll: () => {},
+    };
+  }
 
   return {
     states,

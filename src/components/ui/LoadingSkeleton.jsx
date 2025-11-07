@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import PropTypes from 'prop-types';
 
 /**
  * Reusable LoadingSkeleton component for consistent loading states
@@ -130,6 +131,33 @@ export const ChapterDetailSkeleton = ({ className = '' }) => {
       ))}
     </div>
   );
+};
+
+LoadingSkeleton.propTypes = {
+  variant: PropTypes.oneOf(['default', 'card', 'text', 'image', 'circle']),
+  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  className: PropTypes.string,
+  count: PropTypes.number,
+  rounded: PropTypes.bool,
+};
+
+KomikCardSkeleton.propTypes = {
+  count: PropTypes.number,
+  className: PropTypes.string,
+};
+
+KomikGridSkeleton.propTypes = {
+  count: PropTypes.number,
+  className: PropTypes.string,
+};
+
+KomikDetailSkeleton.propTypes = {
+  className: PropTypes.string,
+};
+
+ChapterDetailSkeleton.propTypes = {
+  className: PropTypes.string,
 };
 
 export default memo(LoadingSkeleton);

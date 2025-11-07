@@ -287,7 +287,6 @@ class CacheManager {
    */
   cleanup() {
     const now = Date.now();
-    let cleanedCount = 0;
     
     // Clean memory cache (limit iterations to avoid blocking)
     const maxIterations = 20;
@@ -296,7 +295,6 @@ class CacheManager {
       if (iterations >= maxIterations) break;
       if (entry.expiresAt && now > entry.expiresAt) {
         this.memoryCache.delete(key);
-        cleanedCount++;
       }
       iterations++;
     }

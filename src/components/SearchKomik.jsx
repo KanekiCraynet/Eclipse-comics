@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react"
 import { FaSearch } from "react-icons/fa"
 import { useDebounceSearch } from "@/hooks/useDebounceSearch"
-import ViewAll from "@/components/ViewAll"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
 import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { NavLink } from "react-router-dom"
 
 const SearchKomik = () => {
     const [inputKeyword, setInputKeyword] = useState("")
-    const { keyword, data, loading, error, search, isValidSearch, hasResults } = useDebounceSearch(inputKeyword, {
+    const { data, loading, error, search, isValidSearch, hasResults } = useDebounceSearch(inputKeyword, {
         debounceMs: 300,
         minLength: 3,
         enableCache: true,

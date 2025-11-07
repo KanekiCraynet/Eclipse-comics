@@ -130,9 +130,6 @@ const KomikDetail = () => {
     return safeImageUrl(thumb, DEFAULT_THUMBNAIL);
   };
 
-  const getRandomNumber = (min, max) => {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
 
   const handleBookmark = () => {
     try {

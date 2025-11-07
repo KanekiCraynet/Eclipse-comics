@@ -1,8 +1,7 @@
-import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeStringSplit, safeStringTrim, safeImageUrl, safeEndpoint, extractChapter, extractRating } from '@/utils/apiHelpers';
+import { safeStringSplit, safeStringTrim, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
 

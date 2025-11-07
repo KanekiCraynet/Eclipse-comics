@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
 import { safeStringTrim, safeImageUrl, safeEndpoint, extractApiData, extractChapter, extractRating } from '@/utils/apiHelpers';
 import { FaStar } from "react-icons/fa6"
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
-import LazyImage from '@/components/ui/LazyImage';
 
 const Popular = () => {
     const { data: popularData, loading: popularLoading, error: popularError, refetch: refetchPopular } = useKomikcastAPI(

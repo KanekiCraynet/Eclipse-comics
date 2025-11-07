@@ -1,12 +1,9 @@
-import React from "react"
 import { NavLink } from "react-router-dom"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import PropTypes from "prop-types"
 import { useKomikcastRoute } from "@/hooks/useKomikcastAPI"
-import { komikcastAPI } from "@/services/api"
 import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
-import LazyImage from "@/components/ui/LazyImage"
 
 const ViewAll = ({ url }) => {
     const [page, setPage] = useState(1)
@@ -17,18 +14,6 @@ const ViewAll = ({ url }) => {
             top: 0
         })
     }, [page])
-
-    // Determine API function based on URL
-    const apiFunction = useMemo(() => {
-        if (url.startsWith('genre/')) {
-            const genre = url.replace('genre/', '').split('?')[0];
-            return () => komikcastAPI.getGenreComics(genre, page);
-        } else if (url.startsWith('search/')) {
-            const keyword = url.split('/')[1];
-            return () => komikcastAPI.search(keyword);
-        }
-        return null;
-    }, [url, page]);
 
     const { data, loading, error, refetch } = useKomikcastRoute(
         url.startsWith('genre/') ? `genre/${url.replace('genre/', '').split('?')[0]}` : 

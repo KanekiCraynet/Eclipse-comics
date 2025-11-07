@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
+import PropTypes from 'prop-types';
 import { safeImageUrl } from '../../utils/apiHelpers';
 
 /**
@@ -128,6 +129,23 @@ export const ImagePlaceholder = ({ width = '100%', height = '200px', className =
       style={{ width, height }}
     />
   );
+};
+
+LazyImage.propTypes = {
+  src: PropTypes.string.isRequired,
+  alt: PropTypes.string,
+  className: PropTypes.string,
+  fallback: PropTypes.string,
+  placeholder: PropTypes.string,
+  onLoad: PropTypes.func,
+  onError: PropTypes.func,
+  loading: PropTypes.oneOf(['lazy', 'eager']),
+};
+
+ImagePlaceholder.propTypes = {
+  width: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  height: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  className: PropTypes.string,
 };
 
 export default memo(LazyImage);

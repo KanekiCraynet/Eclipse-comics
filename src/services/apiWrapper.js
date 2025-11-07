@@ -35,6 +35,7 @@ class APIWrapper {
     this.axiosInstance.interceptors.request.use(
       (config) => {
         // Only log in development and avoid console spam
+        // eslint-disable-next-line no-undef
         if (process.env.NODE_ENV === 'development' && !config.url?.includes('/popular') && !config.url?.includes('/recommended')) {
           console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
         }
@@ -236,6 +237,7 @@ class APIWrapper {
         // Calculate delay with exponential backoff
         const delay = this.getRetryDelay(attempt, baseDelay);
         
+        // eslint-disable-next-line no-undef
         if (process.env.NODE_ENV === 'development') {
           console.log(`[API] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
         }
