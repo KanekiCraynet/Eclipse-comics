@@ -195,9 +195,8 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   // Use individual hooks for each API function
   // Note: This violates rules-of-hooks if apiFunctionsConfig is not an array
   // But we need to handle it gracefully
-  const states = useMemo(() => {
-    if (!isValid) return [];
-    return apiFunctionsConfig.map((config, index) => {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const states = isValid ? apiFunctionsConfig.map((config, index) => {
     const { apiFunction, cacheKey, ...hookOptions } = config;
     
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -208,21 +207,23 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
       skip,
       ...hookOptions,
     });
-    });
-  }, [apiFunctionsConfig, isValid, enableCache, cacheTTL, skip]);
+  }) : [];
 
-  const allLoading = isValid && states.some(state => state.loading);
-  const allSucceeded = isValid && states.every(state => !state.loading && !state.error && state.data !== null);
-  const someSucceeded = isValid && states.some(state => !state.loading && !state.error && state.data !== null);
+  // Memoize states array reference to avoid dependency changes
+  const memoizedStates = useMemo(() => states, [states.length, isValid]);
+
+  const allLoading = isValid && memoizedStates.some(state => state.loading);
+  const allSucceeded = isValid && memoizedStates.every(state => !state.loading && !state.error && state.data !== null);
+  const someSucceeded = isValid && memoizedStates.some(state => !state.loading && !state.error && state.data !== null);
 
   const refetchAll = useCallback(() => {
     if (!isValid) return;
-    states.forEach(state => {
+    memoizedStates.forEach(state => {
       if (state.refetch) {
         state.refetch();
       }
     });
-  }, [states, isValid]);
+  }, [memoizedStates, isValid]);
 
   // Return early if invalid (after all hooks)
   if (!isValid) {
@@ -236,7 +237,7 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   }
 
   return {
-    states,
+    states: memoizedStates,
     allLoading,
     allSucceeded,
     someSucceeded,
