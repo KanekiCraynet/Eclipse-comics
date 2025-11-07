@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useKomikcastAPI } from './useKomikcastAPI';
 
 /**
@@ -20,6 +20,9 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
 
   // Validate input - but don't return early to avoid conditional hooks
   const isValid = Array.isArray(apiFunctions) && apiFunctions.length > 0;
+
+  // Memoize dependencies to avoid spread element warning
+  const dependenciesString = useMemo(() => JSON.stringify(dependencies), [dependencies]);
 
   // Fetch all data in parallel
   const fetchAll = useCallback(async () => {
@@ -128,7 +131,7 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
         setLoading(false);
       }
     }
-  }, [apiFunctions, skip, isValid, ...dependencies]);
+  }, [apiFunctions, skip, isValid, dependenciesString]);
 
   // Effect to fetch data
   useEffect(() => {
@@ -192,8 +195,9 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   // Use individual hooks for each API function
   // Note: This violates rules-of-hooks if apiFunctionsConfig is not an array
   // But we need to handle it gracefully
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const states = isValid ? apiFunctionsConfig.map((config, index) => {
+  const states = useMemo(() => {
+    if (!isValid) return [];
+    return apiFunctionsConfig.map((config, index) => {
     const { apiFunction, cacheKey, ...hookOptions } = config;
     
     // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -204,7 +208,8 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
       skip,
       ...hookOptions,
     });
-  }) : [];
+    });
+  }, [apiFunctionsConfig, isValid, enableCache, cacheTTL, skip]);
 
   const allLoading = isValid && states.some(state => state.loading);
   const allSucceeded = isValid && states.every(state => !state.loading && !state.error && state.data !== null);

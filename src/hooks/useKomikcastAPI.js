@@ -25,6 +25,9 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
   const abortControllerRef = useRef(null);
   const mountedRef = useRef(true);
 
+  // Memoize dependencies to avoid spread element warning
+  const dependenciesString = useMemo(() => JSON.stringify(dependencies), [dependencies]);
+
   // Check cache first
   const getCachedData = useCallback(() => {
     if (!enableCache || !cacheKey) {
@@ -110,7 +113,7 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
     retries,
     retryDelay,
     getCachedData,
-    ...dependencies,
+    dependenciesString,
   ]);
 
   // Refetch function
