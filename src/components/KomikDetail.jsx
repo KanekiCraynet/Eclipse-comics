@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import getAnimeResponse from "@/libs/api-libs";
+import useAnimeResponse from "@/libs/api-libs";
 import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaPaintbrush, FaReadme, FaRegCommentDots } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
 import Loading from "@/components/Loading";
@@ -9,7 +9,7 @@ const KomikDetail = () => {
   const [isBookmark, setIsBookmark] = useState(false);
   const navigate = useNavigate();
   const { komik } = useParams();
-  const { data, loading } = getAnimeResponse(`detail/${komik}`);
+  const { data, loading, error } = useAnimeResponse(`detail/${komik}`);
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
 
@@ -67,7 +67,26 @@ const KomikDetail = () => {
     return <Loading />;
   }
 
-  const genre = data?.genres.map(genre => genre.genreName).join(", ");
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-2">Failed to load comic details</p>
+          <p className="text-gray-500 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Comic not found</p>
+      </div>
+    );
+  }
+
+  const genre = data?.genres?.map(genre => genre.genreName).join(", ") ?? "";
   const angka = parseInt(data?.followedBy.match(/\d+/)?.[0] || 0);
 
   const getRandomNumber = (min, max) => {

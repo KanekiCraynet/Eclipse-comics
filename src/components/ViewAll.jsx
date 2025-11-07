@@ -1,23 +1,49 @@
-import { NavLink, useParams } from "react-router-dom"
+import { NavLink } from "react-router-dom"
 import { useState, useEffect } from "react"
-import getAnimeResponse from "@/libs/api-libs"
+import PropTypes from "prop-types"
+import { useFetch } from "@/libs/api-libs"
 import Loading from "@/components/Loading"
 
 const ViewAll = ({ url }) => {
-    const { genre } = useParams()
     const [page, setPage] = useState(1)
-    
+
     useEffect(() => {
         window.scrollTo({
             behavior: "smooth",
             top: 0
         })
     }, [page])
-    
+
     const route = url.startsWith('genre/') ? `${url}?page=${page}` : url.startsWith('search/') ? `search?keyword=${url.split('/')[1]}` : `${url}/page/${page}`;
-    const { data, loading } = getAnimeResponse(route)
+    const { data, loading, error, retry } = useFetch(route)
+
     if (loading) {
         return <Loading />
+    }
+
+    if (error) {
+        return (
+            <div className="py-2 flex items-center justify-center min-h-[200px]">
+                <div className="text-center">
+                    <p className="text-red-500 mb-2">Failed to load data</p>
+                    <p className="text-gray-500 text-sm mb-4">{error}</p>
+                    <button
+                        onClick={retry}
+                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!data || !data.seriesList || !Array.isArray(data.seriesList) || data.seriesList.length === 0) {
+        return (
+            <div className="py-2 flex items-center justify-center min-h-[200px]">
+                <p className="text-gray-500 text-center">No data available</p>
+            </div>
+        );
     }
     
     return (
@@ -37,7 +63,7 @@ const ViewAll = ({ url }) => {
             </div>
             <div className="flex items-center justify-center gap-2 py-4">
                 {page === 1 ? null : (
-                    <button 
+                    <button
                         className="bg-my text-black font-medium px-2 py-1 rounded-lg"
                         onClick={() => setPage(page - 1)}
                     >
@@ -45,8 +71,8 @@ const ViewAll = ({ url }) => {
                     </button>
                 )}
                 <h3 className="bg-my text-black font-medium px-3 py-1 rounded-full">{page}</h3>
-                {data.pagination.length > 0 ? (
-                    <button 
+                {data?.pagination?.length > 0 ? (
+                    <button
                         className="bg-my text-black font-medium px-2 py-1 rounded-lg"
                         onClick={() => setPage(page + 1)}
                     >
@@ -56,6 +82,10 @@ const ViewAll = ({ url }) => {
             </div>
         </div>
     )
+}
+
+ViewAll.propTypes = {
+    url: PropTypes.string.isRequired
 }
 
 export default ViewAll

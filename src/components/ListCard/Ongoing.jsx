@@ -1,47 +1,49 @@
 import { NavLink } from "react-router-dom"
-import { useState, useEffect } from "react"
-import axios from "axios"
+import { useFetch } from "@/libs/api-libs"
 
 const Ongoing = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
-        const cachedData = localStorage.getItem('manhwa-ongoing');
-        const cachedTime = localStorage.getItem('manhwa-ongoing-time');
-        const currentTime = new Date().getTime();
-        const cacheExpiryTime = 30 * 60 * 1000; // 30 menit
-
-        if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
-            setData(JSON.parse(cachedData));
-            setLoading(false);
-        } else {
-            // Ambil data dari API jika cache expired atau belum ada cache
-            const fetchData = async () => {
-                setLoading(true);
-                try {
-                    const response = await axios.get(`https://api-komikcast.vercel.app/ongoing`);
-                    setData(response.data);
-                    localStorage.setItem('manhwa-ongoing', JSON.stringify(response.data));
-                    localStorage.setItem('manhwa-ongoing-time', currentTime);
-                } catch (error) {
-                    console.error("Error :", error);
-                    setData([]);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchData();
-        }
-    }, []);
+    const { data, loading, error, retry } = useFetch('ongoing', {
+        cacheKey: 'manhwa-ongoing',
+        cacheExpiry: 30 * 60 * 1000 // 30 minutes
+    });
 
     if (loading) {
-        return <div></div> // Tidak menampilkan loading jika data dari cache
+        return (
+            <div className="p-2">
+                <span className="py-2 text-2xl font-extrabold">Komik Ongoing</span>
+                <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-my"></div>
+                </div>
+            </div>
+        );
     }
 
-    if (!data || !Array.isArray(data)) {
-        return <div></div>;
+    if (error) {
+        return (
+            <div className="p-2">
+                <span className="py-2 text-2xl font-extrabold">Komik Ongoing</span>
+                <div className="flex items-center justify-center py-4">
+                    <p className="text-red-500 text-center mb-2">{error}</p>
+                    <button
+                        onClick={retry}
+                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!Array.isArray(data) || data.length === 0) {
+        return (
+            <div className="p-2">
+                <span className="py-2 text-2xl font-extrabold">Komik Ongoing</span>
+                <div className="flex items-center justify-center py-4">
+                    <p className="text-gray-500 text-center">No ongoing comics available</p>
+                </div>
+            </div>
+        );
     }
 
     return (

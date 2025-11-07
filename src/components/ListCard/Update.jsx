@@ -1,47 +1,35 @@
 import { NavLink } from "react-router-dom"
-import { useState, useEffect } from "react"
-import axios from "axios"
+import { useFetch } from "@/libs/api-libs"
 import Loading from "@/components/Loading"
 
 const Update = () => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
-        const cachedData = localStorage.getItem('manhwa-new');
-        const cachedTime = localStorage.getItem('manhwa-new-time');
-        const currentTime = new Date().getTime();
-        const cacheExpiryTime = 2 * 60 * 1000; // 2 menit
-
-        if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
-            setData(JSON.parse(cachedData));
-            setLoading(false);
-        } else {
-            // Ambil data dari API jika cache expired atau belum ada cache
-            const fetchData = async () => {
-                setLoading(true);
-                try {
-                    const response = await axios.get(`https://api-komikcast.vercel.app/popular`);
-                    setData(response.data);
-                    localStorage.setItem('manhwa-new', JSON.stringify(response.data));
-                    localStorage.setItem('manhwa-new-time', currentTime);
-                } catch (error) {
-                    console.error("Error :", error);
-                    setData([]);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchData();
-        }
-    }, []);
+    const { data, loading, error, retry } = useFetch('popular', {
+        cacheKey: 'manhwa-new',
+        cacheExpiry: 2 * 60 * 1000 // 2 minutes
+    });
 
     if (loading) {
         return <Loading />
     }
 
-    if (!data || !Array.isArray(data)) {
+    if (error) {
+        return (
+            <div className="p-2">
+                <span className="py-2 text-2xl font-extrabold">Komik Terbaru</span>
+                <div className="flex items-center justify-center py-4">
+                    <p className="text-red-500 text-center mb-2">{error}</p>
+                    <button
+                        onClick={retry}
+                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
         return <div></div>;
     }
     

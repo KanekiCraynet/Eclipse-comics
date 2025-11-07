@@ -1,7 +1,7 @@
 import { NavLink, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import getAnimeResponse from "@/libs/api-libs";
+import useAnimeResponse from "@/libs/api-libs";
 import { FaArrowLeft } from "react-icons/fa6";
 import Loading from "@/components/Loading";
 
@@ -56,10 +56,29 @@ const ChapterDetail = () => {
         FetchDetail();
     }, [chapter]);
 
-    // Mendapatkan data dari getAnimeResponse
-    const { data, loading } = getAnimeResponse(`read/${chapter}`);
+    // Mendapatkan data dari useAnimeResponse
+    const { data, loading, error } = useAnimeResponse(`read/${chapter}`);
     if (loading) {
         return <Loading />; // Menampilkan loading saat menunggu data
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-500 mb-2">Failed to load chapter</p>
+                    <p className="text-gray-500 text-sm">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!data) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <p className="text-gray-500">Chapter not found</p>
+            </div>
+        );
     }
 
     if (loadingDetail) {
