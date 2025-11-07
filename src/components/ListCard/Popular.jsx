@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeStringTrim, safeImageUrl, safeEndpoint, extractApiData } from '@/utils/apiHelpers';
+import { safeStringTrim, safeImageUrl, safeEndpoint, extractApiData, extractChapter, extractRating } from '@/utils/apiHelpers';
 import { FaStar } from "react-icons/fa6"
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
@@ -56,23 +56,21 @@ const Popular = () => {
                         });
                         const detailData = extractApiData(detailResponse);
                         
-                        // Extract chapter from chapter array (first item is latest)
-                        const latestChapter = detailData?.chapter?.[0]?.title || 
-                                            detailData?.latestChapter || 
-                                            'N/A';
+                        // Extract chapter using helper function (handles array, string, or object format)
+                        const cleanChapter = extractChapter(
+                            detailData?.chapter || detailData?.latestChapter,
+                            'N/A'
+                        );
                         
-                        // Clean chapter string
-                        const cleanChapter = String(latestChapter)
-                            .replace(/^Ch\.?\s*/i, '')
-                            .replace(/^Chapter\s*/i, '')
-                            .trim() || 'N/A';
+                        // Extract and normalize rating using helper function
+                        const normalizedRating = extractRating(detailData?.rating, '0');
                         
                         // Merge popular data with detail data
                         return {
                             ...komik,
                             title: detailData?.title || komik.title || 'Untitled',
                             thumbnail: detailData?.thumbnail || '',
-                            rating: detailData?.rating || '0',
+                            rating: normalizedRating,
                             latestChapter: cleanChapter,
                             endpoint: endpoint,
                         };
@@ -164,19 +162,11 @@ const Popular = () => {
                     const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.thumbnail || komik.imageSrc || komik.image);                                                           
                     const endpoint = safeEndpoint(komik.endpoint || komik.href || komik.link || komik.url);                                                     
-                    const rating = String(komik.rating || '0');
-                    const chapter = safeStringTrim(
-                        komik.latestChapter || 
-                        komik.chapter || 
-                        (Array.isArray(komik.chapter) && komik.chapter[0]?.title) ||                                                                            
+                    const rating = extractRating(komik.rating, '0');
+                    const cleanChapter = extractChapter(
+                        komik.latestChapter || komik.chapter,
                         'N/A'
                     );
-
-                    // Clean chapter string - remove "Ch." and "Chapter" prefixes
-                    const cleanChapter = String(chapter)
-                        .replace(/^Ch\.?\s*/i, '')
-                        .replace(/^Chapter\s*/i, '')
-                        .trim() || 'N/A';
 
                     return (
                         <NavLink

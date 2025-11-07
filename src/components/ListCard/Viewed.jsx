@@ -2,7 +2,7 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI"
 import { komikcastAPI } from "@/services/api"
-import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
+import { safeStringTrim, safeImageUrl, safeEndpoint, extractChapter, extractRating } from "@/utils/apiHelpers"
 import { FaStar } from "react-icons/fa6"
 import { KomikCardSkeleton } from "@/components/ui/LoadingSkeleton"
 import { memo } from "react"
@@ -57,14 +57,11 @@ const Viewed = () => {
                     const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);                                                           
                     const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);                                                                   
-                    const rating = String(komik.rating || '0');
-                    const chapter = safeStringTrim(komik.chapter || komik.latestChapter, 'N/A');                                                                
-
-                    // Clean chapter string - remove "Ch." and "Chapter" prefixes to avoid "Ch. Ch.940"
-                    const cleanChapter = String(chapter)
-                        .replace(/^Ch\.?\s*/i, '')
-                        .replace(/^Chapter\s*/i, '')
-                        .trim() || 'N/A';
+                    const rating = extractRating(komik.rating, '0');
+                    const cleanChapter = extractChapter(
+                        komik.chapter || komik.latestChapter,
+                        'N/A'
+                    );
 
                     return (
                         <NavLink

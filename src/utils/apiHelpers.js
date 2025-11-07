@@ -200,6 +200,87 @@ export const safeInteger = (value, fallback = 0) => {
 };
 
 /**
+ * Extract chapter information from various API response formats
+ * Handles:
+ * - Array format: [{title: "Chapter 240", href: "...", date: "..."}]
+ * - String format: "Ch.940" or "Chapter 240"
+ * - Direct chapter object: {title: "Chapter 240", ...}
+ * 
+ * @param {any} chapterData - Chapter data from API (can be array, string, or object)
+ * @param {string} fallback - Fallback value if chapter cannot be extracted
+ * @returns {string} - Cleaned chapter string (e.g., "240" or "940")
+ */
+export const extractChapter = (chapterData, fallback = 'N/A') => {
+  if (!chapterData) {
+    return fallback;
+  }
+
+  let chapterString = '';
+
+  // Handle array format (from detail API)
+  if (Array.isArray(chapterData)) {
+    // First item is usually the latest chapter
+    const latestChapter = chapterData[0];
+    if (latestChapter && typeof latestChapter === 'object') {
+      chapterString = latestChapter.title || latestChapter.chapterTitle || '';
+    } else if (typeof latestChapter === 'string') {
+      chapterString = latestChapter;
+    }
+  }
+  // Handle string format (from recommended API)
+  else if (typeof chapterData === 'string') {
+    chapterString = chapterData;
+  }
+  // Handle object format
+  else if (typeof chapterData === 'object') {
+    chapterString = chapterData.title || chapterData.chapterTitle || chapterData.latestChapter || '';
+  }
+
+  // Clean chapter string - remove "Ch." and "Chapter" prefixes
+  if (chapterString) {
+    let cleaned = String(chapterString).trim();
+    // Remove "Chapter" prefix first (longer match)
+    cleaned = cleaned.replace(/^Chapter\s+/i, '');
+    // Then remove "Ch." prefix
+    cleaned = cleaned.replace(/^Ch\.?\s*/i, '');
+    return cleaned || fallback;
+  }
+
+  return fallback;
+};
+
+/**
+ * Extract and normalize rating from API response
+ * Handles both string ("7.00") and number (7.0) formats
+ * 
+ * @param {any} rating - Rating from API
+ * @param {string|number} fallback - Fallback value if rating cannot be extracted
+ * @returns {string} - Normalized rating string (e.g., "7.00")
+ */
+export const extractRating = (rating, fallback = '0') => {
+  if (rating === null || rating === undefined) {
+    return String(fallback);
+  }
+
+  // If it's already a string, return it (may need formatting)
+  if (typeof rating === 'string') {
+    const parsed = parseFloat(rating);
+    if (!isNaN(parsed)) {
+      // Format to 2 decimal places if needed
+      return parsed.toFixed(2);
+    }
+    return rating || String(fallback);
+  }
+
+  // If it's a number, format it
+  if (typeof rating === 'number' && !isNaN(rating)) {
+    return rating.toFixed(2);
+  }
+
+  return String(fallback);
+};
+
+/**
  * Data normalization utilities
  */
 export const normalizeKomikData = (komik) => {

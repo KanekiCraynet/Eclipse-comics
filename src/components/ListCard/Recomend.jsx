@@ -2,7 +2,7 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeStringSplit, safeStringTrim, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
+import { safeStringSplit, safeStringTrim, safeImageUrl, safeEndpoint, extractChapter, extractRating } from '@/utils/apiHelpers';
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
 
@@ -62,7 +62,7 @@ const Recomend = () => {
                     const genres = safeStringSplit(komik.genres || komik.genre);
                     const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail);
-                    const endpoint = safeEndpoint(komik.url || komik.endpoint || komik.link);
+                    const endpoint = safeEndpoint(komik.href || komik.url || komik.endpoint || komik.link);
 
                     return (
                         <NavLink
