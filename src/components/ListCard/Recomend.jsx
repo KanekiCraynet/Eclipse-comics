@@ -2,7 +2,7 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeStringSplit, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
+import { safeStringSplit, safeStringTrim, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
 
@@ -58,9 +58,9 @@ const Recomend = () => {
             <span className="py-2 text-2xl font-extrabold">Rekomendasi</span>
             <div className="flex items-center scroll-page snap-x snap-mandatory pt-4 pb-2 overflow-x-auto">
                 {data.map((komik, index) => {
-                    // Safe data access dengan optional chaining & fallback
+                    // Safe data access dengan normalization functions
                     const genres = safeStringSplit(komik.genres || komik.genre);
-                    const title = komik.title || 'Untitled';
+                    const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail);
                     const endpoint = safeEndpoint(komik.url || komik.endpoint || komik.link);
 

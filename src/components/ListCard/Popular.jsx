@@ -2,7 +2,7 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
+import { safeStringTrim, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
 import { FaStar } from "react-icons/fa6"
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
@@ -59,11 +59,11 @@ const Popular = () => {
             <span className="py-2 text-2xl font-extrabold">Komik Populer</span>
             <div className="flex items-center scroll-page gap-2 py-2">
                 {data.map((komik, index) => {
-                    const title = komik.title || 'Untitled';
+                    const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
                     const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
                     const rating = String(komik.rating || '0');
-                    const chapter = komik.chapter || komik.latestChapter || 'N/A';
+                    const chapter = safeStringTrim(komik.chapter || komik.latestChapter, 'N/A');
 
                     return (
                         <NavLink

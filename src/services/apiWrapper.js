@@ -61,17 +61,58 @@ class APIWrapper {
   transformError(error) {
     if (error.response) {
       // Server responded with error status
+      const status = error.response.status;
+      let message = error.response.data?.message;
+      
+      // Provide user-friendly error messages based on status code
+      if (!message) {
+        switch (status) {
+          case 400:
+            message = 'Permintaan tidak valid. Silakan coba lagi.';
+            break;
+          case 401:
+            message = 'Tidak memiliki izin untuk mengakses data ini.';
+            break;
+          case 403:
+            message = 'Akses ditolak.';
+            break;
+          case 404:
+            message = 'Data tidak ditemukan.';
+            break;
+          case 429:
+            message = 'Terlalu banyak permintaan. Silakan tunggu sebentar.';
+            break;
+          case 500:
+            message = 'Kesalahan server. Silakan coba lagi nanti.';
+            break;
+          case 503:
+            message = 'Layanan sedang tidak tersedia. Silakan coba lagi nanti.';
+            break;
+          default:
+            message = `Kesalahan server (${status}). Silakan coba lagi.`;
+        }
+      }
+      
       return {
-        message: error.response.data?.message || `Server error: ${error.response.status}`,
-        status: error.response.status,
+        message,
+        status,
         data: error.response.data,
         isNetworkError: false,
         originalError: error,
       };
     } else if (error.request) {
-      // Request made but no response
+      // Request made but no response (network error)
       return {
-        message: 'Network error: No response from server',
+        message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+        status: null,
+        data: null,
+        isNetworkError: true,
+        originalError: error,
+      };
+    } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      // Request timeout
+      return {
+        message: 'Waktu permintaan habis. Silakan coba lagi.',
         status: null,
         data: null,
         isNetworkError: true,
@@ -80,7 +121,7 @@ class APIWrapper {
     } else {
       // Error setting up request
       return {
-        message: error.message || 'Unknown error occurred',
+        message: error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
         status: null,
         data: null,
         isNetworkError: false,

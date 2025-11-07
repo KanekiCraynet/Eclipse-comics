@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { komikcastAPI } from '../services/api';
 import cacheManager from '../services/cacheManager';
-import { validateSearchResponse } from '../utils/apiHelpers';
+import { extractApiData, validateSearchResponse } from '../utils/apiHelpers';
 
 /**
  * Debounced search hook with cancellation and caching
@@ -82,10 +82,9 @@ export const useDebounceSearch = (keyword, options = {}) => {
         enableDeduplication: true,
       });
 
-      // API returns { status: "success", data: [...] }
-      // Extract data from response
-      const responseData = response?.data || response;
-      const validatedData = validateSearchResponse(responseData);
+      // Extract data from response consistently
+      const extractedData = extractApiData(response);
+      const validatedData = validateSearchResponse(extractedData);
 
       // Only update if component is mounted and not cancelled
       if (mountedRef.current && !signal.aborted) {
@@ -104,7 +103,8 @@ export const useDebounceSearch = (keyword, options = {}) => {
         return;
       }
 
-      const errorMessage = err.message || 'Failed to search';
+      // Extract error message from transformed error (API wrapper already provides user-friendly messages)
+      const errorMessage = err.message || 'Gagal melakukan pencarian. Silakan coba lagi.';
       setError(errorMessage);
       setData(null);
     } finally {

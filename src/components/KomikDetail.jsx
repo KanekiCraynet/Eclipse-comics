@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
 import { komikcastAPI } from "@/services/api";
 import { getJSONItem, setJSONItem } from "@/utils/storageHelpers";
-import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
+import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
 import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
 import { KomikDetailSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -15,7 +15,8 @@ const KomikDetail = () => {
   const { komik } = useParams();
   
   // Use unified hook with caching
-  const { data: responseData, loading, error, refetch } = useKomikcastAPI(
+  // Data is already extracted by useKomikcastAPI using extractApiData
+  const { data, loading, error, refetch } = useKomikcastAPI(
     () => komikcastAPI.getDetail(komik),
     {
       cacheKey: `komik_detail_${komik}`,
@@ -23,9 +24,6 @@ const KomikDetail = () => {
       enableCache: true,
     }
   );
-  
-  // Extract data from response
-  const data = responseData?.data || responseData;
   
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
@@ -179,7 +177,7 @@ const KomikDetail = () => {
   };
 
   const thumbnailUrl = getThumbnailUrl(data?.thumbnail);
-  const title = data?.title?.replace("Bahasa Indonesia", "") || "Untitled";
+  const title = safeStringTrim(data?.title?.replace("Bahasa Indonesia", ""), "Untitled");
   const chapters = Array.isArray(data?.chapter) ? data.chapter : [];
 
   return (

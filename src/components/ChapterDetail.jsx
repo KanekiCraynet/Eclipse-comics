@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
 import { komikcastAPI } from "@/services/api";
 import { getJSONItem, setJSONItem } from "@/utils/storageHelpers";
-import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
+import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
 import { FaArrowLeft } from "react-icons/fa6";
 import { ChapterDetailSkeleton } from "@/components/ui/LoadingSkeleton";
 import LazyImage from "@/components/ui/LazyImage";
@@ -37,13 +37,13 @@ const ChapterDetail = () => {
     );
 
     // Extract data from responses
-    // Chapter response format: { status: "success", data: [{ title: "...", panel: [...] }] }
-    const chapterResponseData = chapterData?.data || chapterData;
-    const chapterResponse = Array.isArray(chapterResponseData) && chapterResponseData.length > 0 
-      ? chapterResponseData[0] 
-      : chapterResponseData;
+    // Data is already extracted by useKomikcastAPI using extractApiData
+    // Chapter response format: [{ title: "...", panel: [...] }] or { title: "...", panel: [...] }
+    const chapterResponse = Array.isArray(chapterData) && chapterData.length > 0 
+      ? chapterData[0] 
+      : chapterData;
     
-    const komikResponse = komikData?.data || komikData;
+    const komikResponse = komikData;
 
     const loading = chapterLoading || komikLoading;
     const error = chapterError || komikError;
@@ -161,9 +161,9 @@ const ChapterDetail = () => {
       : Array.isArray(chapterResponse?.images) 
         ? chapterResponse.images 
         : [];
-    const chapterTitle = chapterResponse?.title || "Chapter";
+    const chapterTitle = safeStringTrim(chapterResponse?.title, "Chapter");
     const chapterNumber = chapterTitle.split("Chapter ")[1] || "";
-    const komikTitle = komikResponse?.title?.replace("Bahasa Indonesia", "") || "Unknown";
+    const komikTitle = safeStringTrim(komikResponse?.title?.replace("Bahasa Indonesia", ""), "Unknown");
     const komikThumbnail = safeImageUrl(komikResponse?.thumbnail || komikResponse?.imageSrc);
     const prevChapterEndpoint = safeEndpoint(chapterResponse?.prevChapter || "", "");
     const nextChapterEndpoint = safeEndpoint(chapterResponse?.nextChapter || "", "");

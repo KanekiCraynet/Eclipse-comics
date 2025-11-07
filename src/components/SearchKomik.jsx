@@ -3,7 +3,7 @@ import { FaSearch } from "react-icons/fa"
 import { useDebounceSearch } from "@/hooks/useDebounceSearch"
 import ViewAll from "@/components/ViewAll"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
-import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
+import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { NavLink } from "react-router-dom"
 
 const SearchKomik = () => {
@@ -74,10 +74,10 @@ const SearchKomik = () => {
                 <div className="py-2">
                     <div className="grid grid-cols-3 gap-2">
                         {data.seriesList.map((komik, index) => {
-                            const title = komik.title || 'Untitled'
+                            const title = safeStringTrim(komik.title, 'Untitled')
                             const thumbnail = safeImageUrl(komik.image || komik.imageSrc)
                             const endpoint = safeEndpoint(komik.url || komik.endpoint)
-                            const latestChapter = komik.latestChapter || 'N/A'
+                            const latestChapter = safeStringTrim(komik.latestChapter, 'N/A')
 
                             return (
                                 <NavLink

@@ -2,7 +2,7 @@ import React from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI"
 import { komikcastAPI } from "@/services/api"
-import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
+import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
 import LazyImage from "@/components/ui/LazyImage"
 import { memo } from "react"
@@ -54,10 +54,10 @@ const Update = () => {
             <span className="py-2 text-2xl font-extrabold">Komik Terbaru</span>
             <div className="grid grid-cols-3 gap-2 py-2">
                 {data.slice(0,21).map((komik, index) => {
-                    const title = komik.title || 'Untitled';
+                    const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
                     const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
-                    const chapterTitle = komik.chapters?.[0]?.chapterTitle || komik.latestChapter || 'N/A';
+                    const chapterTitle = safeStringTrim(komik.chapters?.[0]?.chapterTitle || komik.latestChapter, 'N/A');
 
                     return (
                         <NavLink

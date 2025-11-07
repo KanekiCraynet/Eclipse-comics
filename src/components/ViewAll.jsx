@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import PropTypes from "prop-types"
 import { useKomikcastRoute } from "@/hooks/useKomikcastAPI"
 import { komikcastAPI } from "@/services/api"
-import { safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
+import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
 import LazyImage from "@/components/ui/LazyImage"
 
@@ -62,15 +62,14 @@ const ViewAll = ({ url }) => {
     }
 
     // Handle different response structures
-    // API returns: { status: "success", data: [...] } or { status: "success", data: { seriesList: [...] } }
-    // After validation, data should be the array directly
+    // Data is already extracted by useKomikcastAPI using extractApiData
+    // Search results: { seriesList: [...], pagination: [...] }
+    // Genre results: [...]
     const seriesList = Array.isArray(data) 
       ? data 
-      : data?.seriesList 
+      : data?.seriesList && Array.isArray(data.seriesList)
         ? data.seriesList 
-        : data?.data && Array.isArray(data.data)
-          ? data.data
-          : [];
+        : [];
     
     if (!seriesList || !Array.isArray(seriesList) || seriesList.length === 0) {
         return (
@@ -86,8 +85,8 @@ const ViewAll = ({ url }) => {
                 {seriesList.map((komik, index) => {
                     const thumbnail = safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail);
                     const endpoint = safeEndpoint(komik.url || komik.link || komik.endpoint);
-                    const latestChapter = komik.latestChapter || 'N/A';
-                    const title = komik.title || 'Untitled';
+                    const latestChapter = safeStringTrim(komik.latestChapter, 'N/A');
+                    const title = safeStringTrim(komik.title, 'Untitled');
 
                     return (
                         <NavLink

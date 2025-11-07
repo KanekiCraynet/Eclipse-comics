@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { komikcastAPI } from '../services/api';
 import cacheManager from '../services/cacheManager';
-import { validateApiResponse } from '../utils/apiHelpers';
+import { extractApiData } from '../utils/apiHelpers';
 
 /**
  * Unified API hook consolidating both useFetch implementations
@@ -72,17 +72,17 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
         enableDeduplication: true,
       });
 
-      // Validate response
-      const validatedData = validateApiResponse(response);
+      // Extract data from response consistently
+      const extractedData = extractApiData(response);
 
       // Only update state if component is still mounted
       if (mountedRef.current && !signal.aborted) {
-        setData(validatedData);
+        setData(extractedData);
         setError(null);
 
         // Cache the data
         if (enableCache && cacheKey) {
-          cacheManager.set(cacheKey, validatedData, cacheTTL);
+          cacheManager.set(cacheKey, extractedData, cacheTTL);
         }
       }
     } catch (err) {
@@ -91,7 +91,8 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
         return;
       }
 
-      const errorMessage = err.message || err.response?.data?.message || 'Failed to fetch data';
+      // Extract error message from transformed error (API wrapper already provides user-friendly messages)
+      const errorMessage = err.message || err.response?.data?.message || 'Gagal memuat data. Silakan coba lagi.';
       setError(errorMessage);
       setData(null);
     } finally {

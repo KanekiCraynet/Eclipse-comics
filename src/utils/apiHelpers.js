@@ -2,18 +2,44 @@
 import { safeParseJSON } from './storageHelpers';
 
 /**
+ * Extract data from API response consistently
+ * Handles both axios response format and direct data format
+ * API wrapper returns: { data: { status: 'success', data: [...] } }
+ * This function extracts the actual data from the response
+ */
+export const extractApiData = (response) => {
+  if (!response) {
+    return null;
+  }
+
+  // If response is already the data (not wrapped in axios response)
+  if (!response.data && !response.status) {
+    return response;
+  }
+
+  // Handle axios response format: response.data
+  const responseData = response.data || response;
+
+  // If responseData has status field, it's from API wrapper
+  if (responseData.status !== undefined) {
+    if (responseData.status === 'success') {
+      // API wrapper format: { status: 'success', data: [...] }
+      return responseData.data !== undefined ? responseData.data : responseData;
+    } else {
+      throw new Error(responseData.message || 'API request failed');
+    }
+  }
+
+  // Direct data format (already extracted)
+  return responseData;
+};
+
+/**
  * Validate API response structure
+ * @deprecated Use extractApiData instead for consistent data extraction
  */
 export const validateApiResponse = (response, expectedDataType = 'array') => {
-  if (!response?.data) {
-    throw new Error('Invalid API response structure');
-  }
-
-  const { status, data } = response.data;
-
-  if (status !== 'success') {
-    throw new Error(response.data?.message || 'API request failed');
-  }
+  const data = extractApiData(response);
 
   if (expectedDataType === 'array' && !Array.isArray(data)) {
     console.warn('Expected array but got:', typeof data);
