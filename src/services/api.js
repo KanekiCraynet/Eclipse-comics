@@ -5,23 +5,24 @@ import {
   validateGenre,
   validatePage,
 } from '../utils/apiHelpers';
-
-const BASE_URL = 'https://api-komikcast.vercel.app';
+import { API_CONFIG, API_ENDPOINTS } from '../constants/api';
 
 // Create API wrapper instance with retry logic and deduplication
-const apiWrapper = new APIWrapper(BASE_URL, {
-  timeout: 10000,
-  retries: 3,
-  retryDelay: 1000,
+const apiWrapper = new APIWrapper(API_CONFIG.BASE_URL, {
+  timeout: API_CONFIG.TIMEOUT,
+  retries: API_CONFIG.RETRIES,
+  retryDelay: API_CONFIG.RETRY_DELAY,
 });
 
 // API Methods with parameter validation and error handling
 export const komikcastAPI = {
   /**
    * Get recommended comics
+   * GET /recommended
+   * Returns: Array of recommended comics
    */
   getRecommended: (options = {}) => {
-    return apiWrapper.get('/recommended', {}, {
+    return apiWrapper.get(API_ENDPOINTS.RECOMMENDED, {}, {
       ...options,
       enableDeduplication: true,
     });
@@ -29,9 +30,11 @@ export const komikcastAPI = {
 
   /**
    * Get popular comics
+   * GET /popular
+   * Returns: Array of popular comics
    */
   getPopular: (options = {}) => {
-    return apiWrapper.get('/popular', {}, {
+    return apiWrapper.get(API_ENDPOINTS.POPULAR, {}, {
       ...options,
       enableDeduplication: true,
     });
@@ -39,11 +42,15 @@ export const komikcastAPI = {
 
   /**
    * Get newest comics (terbaru) with pagination
+   * GET /terbaru?page=1
+   * @param {number} page - Page number (default: 1)
+   * @param {object} options - Additional options
+   * @returns {Promise} Array of latest comics
    */
   getTerbaru: (page = 1, options = {}) => {
     try {
       const validatedPage = validatePage(page);
-      return apiWrapper.get('/terbaru', {
+      return apiWrapper.get(API_ENDPOINTS.TERBARU, {
         params: { page: validatedPage },
       }, {
         ...options,
@@ -56,11 +63,15 @@ export const komikcastAPI = {
 
   /**
    * Get komik detail by endpoint
+   * GET /detail/:endpoint
+   * @param {string} endpoint - Komik endpoint (e.g., "solo-leveling")
+   * @param {object} options - Additional options
+   * @returns {Promise} Komik detail object
    */
   getDetail: (endpoint, options = {}) => {
     try {
       const validatedEndpoint = validateEndpoint(endpoint);
-      return apiWrapper.get(`/detail/${validatedEndpoint}`, {}, {
+      return apiWrapper.get(`${API_ENDPOINTS.DETAIL}/${validatedEndpoint}`, {}, {
         ...options,
         enableDeduplication: true,
       });
@@ -71,11 +82,15 @@ export const komikcastAPI = {
 
   /**
    * Search comics by keyword
+   * GET /search?keyword=query
+   * @param {string} keyword - Search keyword (min 2 characters)
+   * @param {object} options - Additional options
+   * @returns {Promise} Search results object with seriesList and pagination
    */
   search: (keyword, options = {}) => {
     try {
       const validatedKeyword = validateKeyword(keyword);
-      return apiWrapper.get('/search', {
+      return apiWrapper.get(API_ENDPOINTS.SEARCH, {
         params: { keyword: validatedKeyword },
       }, {
         ...options,
@@ -88,11 +103,15 @@ export const komikcastAPI = {
 
   /**
    * Read chapter by endpoint
+   * GET /read/:endpoint
+   * @param {string} endpoint - Chapter endpoint (e.g., "solo-leveling-chapter-1")
+   * @param {object} options - Additional options
+   * @returns {Promise} Chapter object with title and panel (images array)
    */
   readChapter: (endpoint, options = {}) => {
     try {
       const validatedEndpoint = validateEndpoint(endpoint);
-      return apiWrapper.get(`/read/${validatedEndpoint}`, {}, {
+      return apiWrapper.get(`${API_ENDPOINTS.READ}/${validatedEndpoint}`, {}, {
         ...options,
         enableDeduplication: true,
       });
@@ -103,9 +122,12 @@ export const komikcastAPI = {
 
   /**
    * Get all genres
+   * GET /genre
+   * @param {object} options - Additional options
+   * @returns {Promise} Array of genre objects
    */
   getGenres: (options = {}) => {
-    return apiWrapper.get('/genre', {}, {
+    return apiWrapper.get(API_ENDPOINTS.GENRE, {}, {
       ...options,
       enableDeduplication: true,
     });
@@ -113,12 +135,17 @@ export const komikcastAPI = {
 
   /**
    * Get comics by genre with pagination
+   * GET /genre/:genre?page=1
+   * @param {string} genre - Genre name (e.g., "action")
+   * @param {number} page - Page number (default: 1)
+   * @param {object} options - Additional options
+   * @returns {Promise} Array of comics in the genre
    */
   getGenreComics: (genre, page = 1, options = {}) => {
     try {
       const validatedGenre = validateGenre(genre);
       const validatedPage = validatePage(page);
-      return apiWrapper.get(`/genre/${validatedGenre}`, {
+      return apiWrapper.get(`${API_ENDPOINTS.GENRE}/${validatedGenre}`, {
         params: { page: validatedPage },
       }, {
         ...options,

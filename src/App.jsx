@@ -10,6 +10,7 @@ const SearchKomik = lazy(() => import("@/components/SearchKomik"))
 const Bookmark = lazy(() => import("@/components/Bookmark"))
 const History = lazy(() => import("@/components/History"))
 const Info = lazy(() => import("@/components/Info"))
+const Setting = lazy(() => import("@/components/Setting"))
 const Genres = lazy(() => import("@/components/Genres"))
 const KomikDetail = lazy(() => import("@/components/KomikDetail"))
 const ChapterDetail = lazy(() => import("@/components/ChapterDetail"))
@@ -42,8 +43,9 @@ const App = () => {
                     <Route path="/bookmark" element={<Bookmark />} />
                     <Route path="/history" element={<History />} />
                     <Route path="/info" element={<Info />} />
+                    <Route path="/setting" element={<Setting />} />
                     <Route path="/genres/:genre" element={<Genres />} />
-                    <Route path="/komik" element={<Navigate to="/" replace />} />
+                    <Route path="/komik" element={<Navigate to="/komik/" replace />} />
                     <Route path="/komik/:komik" element={<KomikDetail />} />
                     <Route path="/chapter/:chapter" element={<ChapterDetail />} />
                 </Routes>

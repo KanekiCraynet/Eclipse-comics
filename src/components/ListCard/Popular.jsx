@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react"
+import { useMemo } from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
+import { useBatchFetch } from '@/hooks/useBatchFetch';
 import { komikcastAPI } from '@/services/api';
 import { safeStringTrim, safeImageUrl, safeEndpoint, extractApiData, extractChapter, extractRating } from '@/utils/apiHelpers';
 import { FaStar } from "react-icons/fa6"
@@ -16,105 +17,85 @@ const Popular = () => {
         }
     );
 
-    const [enrichedData, setEnrichedData] = useState([]);
-    const [loadingDetails, setLoadingDetails] = useState(false);
+    // Prepare items for batch fetching (limit to first 9 comics)
+    const comicsToFetch = useMemo(() => {
+        if (!popularData || !Array.isArray(popularData) || popularData.length === 0) {
+            return [];
+        }
+        return popularData.slice(0, 9).map(komik => {
+            const href = komik.href || komik.link || komik.url || '';
+            const endpoint = safeEndpoint(href);
+            return { ...komik, endpoint };
+        }).filter(komik => komik.endpoint);
+    }, [popularData]);
 
-    // Fetch detail data for each popular comic to get thumbnail, rating, and chapter
-    // Note: /popular endpoint only returns title, href, genre, year - we need to fetch details                                                                           
-    useEffect(() => {
-        if (!popularData || !Array.isArray(popularData) || popularData.length === 0) {                                                                          
-            setEnrichedData([]);
-            return;
+    // Batch fetch details with rate limiting
+    const fetchDetail = useMemo(() => async (komik) => {
+        if (!komik.endpoint) {
+            return null;
+        }
+        try {
+            const detailResponse = await komikcastAPI.getDetail(komik.endpoint, {
+                enableDeduplication: true,
+            });
+            return extractApiData(detailResponse);
+        } catch (error) {
+            console.warn(`Failed to fetch detail for ${komik.title}:`, error);
+            return null;
+        }
+    }, []);
+
+    const { data: batchResults, loading: loadingDetails } = useBatchFetch(
+        comicsToFetch,
+        fetchDetail,
+        {
+            batchSize: 3, // Fetch 3 at a time
+            delay: 150, // 150ms delay between batches
+            enabled: comicsToFetch.length > 0,
+        }
+    );
+
+    // Merge popular data with detail data
+    const enrichedData = useMemo(() => {
+        if (!batchResults || batchResults.length === 0) {
+            // Return original data with defaults if batch fetch hasn't completed
+            return comicsToFetch.map(komik => ({
+                ...komik,
+                thumbnail: '',
+                rating: '0',
+                latestChapter: 'N/A',
+            }));
         }
 
-        const fetchDetails = async () => {
-            setLoadingDetails(true);
-            try {
-                // Limit to first 9 comics to avoid too many API calls
-                const comicsToFetch = popularData.slice(0, 9);
-                
-                // Fetch details in parallel
-                const detailPromises = comicsToFetch.map(async (komik) => {
-                    try {
-                        // Extract endpoint from href (e.g., "/murim-login/" -> "murim-login")
-                        const href = komik.href || komik.link || komik.url || '';
-                        const endpoint = safeEndpoint(href);
-                        
-                        if (!endpoint) {
-                            return {
-                                ...komik,
-                                endpoint: '',
-                                thumbnail: '',
-                                rating: '0',
-                                latestChapter: 'N/A',
-                            };
-                        }
-                        
-                        const detailResponse = await komikcastAPI.getDetail(endpoint, {                                                                         
-                            enableDeduplication: true,
-                        });
-                        const detailData = extractApiData(detailResponse);
-                        
-                        // Extract chapter using helper function (handles array, string, or object format)
-                        const cleanChapter = extractChapter(
-                            detailData?.chapter || detailData?.latestChapter,
-                            'N/A'
-                        );
-                        
-                        // Extract and normalize rating using helper function
-                        const normalizedRating = extractRating(detailData?.rating, '0');
-                        
-                        // Merge popular data with detail data
-                        return {
-                            ...komik,
-                            title: detailData?.title || komik.title || 'Untitled',
-                            thumbnail: detailData?.thumbnail || '',
-                            rating: normalizedRating,
-                            latestChapter: cleanChapter,
-                            endpoint: endpoint,
-                        };
-                    } catch (error) {
-                        // If detail fetch fails, return original data with defaults
-                        console.warn(`Failed to fetch detail for ${komik.title}:`, error);                                                                      
-                        const href = komik.href || komik.link || komik.url || '';
-                        const endpoint = safeEndpoint(href);
-                        return {
-                            ...komik,
-                            endpoint: endpoint,
-                            thumbnail: '',
-                            rating: '0',
-                            latestChapter: 'N/A',
-                        };
-                    }
-                });
-
-                const enriched = await Promise.all(detailPromises);
-                setEnrichedData(enriched);
-            } catch (error) {
-                console.error('Error fetching comic details:', error);
-                // Fallback to original data if all fails
-                setEnrichedData(popularData.slice(0, 9).map(komik => {
-                    const href = komik.href || komik.link || komik.url || '';
-                    const endpoint = safeEndpoint(href);
-                    return {
-                        ...komik,
-                        endpoint: endpoint,
-                        thumbnail: '',
-                        rating: '0',
-                        latestChapter: 'N/A',
-                    };
-                }));
-            } finally {
-                setLoadingDetails(false);
+        return batchResults.map(({ item: komik, result: detailData }) => {
+            if (!detailData) {
+                return {
+                    ...komik,
+                    thumbnail: '',
+                    rating: '0',
+                    latestChapter: 'N/A',
+                };
             }
-        };
 
-        fetchDetails();
-    }, [popularData]);
+            const cleanChapter = extractChapter(
+                detailData?.chapter || detailData?.latestChapter,
+                'N/A'
+            );
+            const normalizedRating = extractRating(detailData?.rating, '0');
+
+            return {
+                ...komik,
+                title: detailData?.title || komik.title || 'Untitled',
+                thumbnail: detailData?.thumbnail || '',
+                rating: normalizedRating,
+                latestChapter: cleanChapter,
+            };
+        });
+    }, [batchResults, comicsToFetch]);
 
     const loading = popularLoading || loadingDetails;
     const error = popularError;
-    const data = enrichedData.length > 0 ? enrichedData : (popularData || []);
+    const data = enrichedData.length > 0 ? enrichedData : (popularData?.slice(0, 9) || []);
 
     if (loading) {
         return (

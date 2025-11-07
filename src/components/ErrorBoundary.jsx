@@ -18,20 +18,28 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-          <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
-            <h2 className="text-2xl font-bold text-red-600 mb-4">
+        <div className="min-h-screen flex items-center justify-center bg-[#111111]">
+          <div className="bg-[#212121] p-8 rounded-lg shadow-md max-w-md">
+            <h2 className="text-2xl font-bold text-red-500 mb-4">
               Oops! Terjadi Kesalahan
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-400 mb-4">
               {this.state.error?.message || 'Something went wrong'}
             </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-            >
-              Reload Halaman
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => this.setState({ hasError: false, error: null })}
+                className="flex-1 bg-[#171717] text-white py-2 rounded hover:bg-[#111111] transition-colors"
+              >
+                Coba Lagi
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-my text-black py-2 rounded hover:bg-opacity-80 font-medium"
+              >
+                Reload Halaman
+              </button>
+            </div>
           </div>
         </div>
       );

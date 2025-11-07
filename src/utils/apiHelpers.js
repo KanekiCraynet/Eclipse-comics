@@ -50,6 +50,52 @@ export const validateApiResponse = (response, expectedDataType = 'array') => {
 };
 
 /**
+ * Validate response schema for better error handling
+ * @param {any} data - Response data to validate
+ * @param {string} type - Expected data type ('array', 'object', 'string', 'number')
+ * @returns {boolean} - True if valid, false otherwise
+ */
+export const validateResponseSchema = (data, type = 'array') => {
+  if (!data) return false;
+  
+  switch (type) {
+    case 'array':
+      return Array.isArray(data);
+    case 'object':
+      return typeof data === 'object' && !Array.isArray(data) && data !== null;
+    case 'string':
+      return typeof data === 'string';
+    case 'number':
+      return typeof data === 'number' && !isNaN(data);
+    default:
+      return true;
+  }
+};
+
+/**
+ * Validate and extract API response with schema validation
+ * @param {any} response - API response
+ * @param {string} expectedType - Expected data type ('array', 'object')
+ * @param {string} endpoint - API endpoint for error messages
+ * @returns {any} - Extracted and validated data
+ */
+export const validateAndExtractResponse = (response, expectedType = 'array', endpoint = '') => {
+  try {
+    const data = extractApiData(response);
+    
+    if (!validateResponseSchema(data, expectedType)) {
+      console.warn(`[API] Invalid response schema for ${endpoint}: expected ${expectedType}, got ${typeof data}`);
+      return expectedType === 'array' ? [] : null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`[API] Error validating response for ${endpoint}:`, error);
+    return expectedType === 'array' ? [] : null;
+  }
+};
+
+/**
  * Validate API parameters
  */
 export const validateEndpoint = (endpoint) => {
@@ -87,6 +133,11 @@ export const validatePage = (page) => {
   const pageNum = typeof page === 'number' ? page : parseInt(page, 10);
   if (isNaN(pageNum) || pageNum < 1) {
     throw new Error('Page must be a positive integer');
+  }
+  // Import VALIDATION from constants if needed, but for now use inline
+  const MAX_PAGE = 1000;
+  if (pageNum > MAX_PAGE) {
+    throw new Error(`Page must be less than or equal to ${MAX_PAGE}`);
   }
   return pageNum;
 };

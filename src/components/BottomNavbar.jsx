@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom"
 import { FaHome,FaSearch,FaHistory } from "react-icons/fa"
-import { FaBookmark,FaCircleInfo } from "react-icons/fa6"
+import { FaBookmark,FaCircleInfo, FaGear } from "react-icons/fa6"
 import PropTypes from "prop-types"
 
 const BottomNavbar = ({ route }) => {
@@ -27,6 +27,9 @@ const BottomNavbar = ({ route }) => {
                 </NavLink>
                 <NavLink to="/info" className={`nav-links relative flex items-center justify-center grow p-2.5 ${getActive("/info")}`}>
                     <FaCircleInfo className="text-xl" />
+                </NavLink>
+                <NavLink to="/setting" className={`nav-links relative flex items-center justify-center grow p-2.5 ${getActive("/setting")}`}>
+                    <FaGear className="text-xl" />
                 </NavLink>
             </div>
         </div>
