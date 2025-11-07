@@ -1,4 +1,4 @@
-import { Route, Routes, useLocation } from "react-router-dom"
+import { Route, Routes, useLocation, Navigate } from "react-router-dom"
 import { lazy, Suspense } from "react"
 import "@/index.css"
 import BottomNavbar from "@/components/BottomNavbar"
@@ -43,6 +43,7 @@ const App = () => {
                     <Route path="/history" element={<History />} />
                     <Route path="/info" element={<Info />} />
                     <Route path="/genres/:genre" element={<Genres />} />
+                    <Route path="/komik" element={<Navigate to="/" replace />} />
                     <Route path="/komik/:komik" element={<KomikDetail />} />
                     <Route path="/chapter/:chapter" element={<ChapterDetail />} />
                 </Routes>

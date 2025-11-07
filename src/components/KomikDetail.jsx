@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import useAnimeResponse from "@/libs/api-libs";
-import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaPaintbrush, FaReadme } from "react-icons/fa6";
+import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
 import Loading from "@/components/Loading";
 
@@ -45,9 +45,9 @@ const KomikDetail = () => {
 
     loadCommentBox();
 
-    if (data) {
+    if (data?.data) {
       const checkBookmark = JSON.parse(localStorage.getItem("bookmarkKomik")) || [];
-      const isBookmarked = checkBookmark.some((komik) => komik.title === data.title);
+      const isBookmarked = checkBookmark.some((komik) => komik.title === data.data.title);
       setIsBookmark(isBookmarked);
     }
 
@@ -86,7 +86,7 @@ const KomikDetail = () => {
     );
   }
 
-  const angka = parseInt(data?.followedBy.match(/\d+/)?.[0] || 0);
+  const angka = data?.data?.chapter?.length || 0;
 
   const getRandomNumber = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -95,11 +95,11 @@ const KomikDetail = () => {
   const handleBookmark = () => {
     const bookmarkKomik = JSON.parse(localStorage.getItem("bookmarkKomik")) || [];
     if (isBookmark) {
-      const removeBookmark = bookmarkKomik.filter(komik => komik.title !== data.title);
+      const removeBookmark = bookmarkKomik.filter(komik => komik.title !== data.data.title);
       localStorage.setItem("bookmarkKomik", JSON.stringify(removeBookmark));
       setIsBookmark(false);
     } else {
-      const updatedData = { ...data, link: komik };
+      const updatedData = { ...data.data, link: komik };
       bookmarkKomik.push(updatedData);
       localStorage.setItem("bookmarkKomik", JSON.stringify(bookmarkKomik));
       setIsBookmark(true);
@@ -127,41 +127,38 @@ const KomikDetail = () => {
   return (
     <div>
       <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-2">
-        <img className="absolute top-0 w-screen h-52 blur-2xl" src={data.imageSrc} />
+        <img className="absolute top-0 w-screen h-52 blur-2xl" src={data.data.thumbnail} />
         <button className="absolute top-2 left-3" onClick={() => navigate(-1)}>
           <FaArrowLeft className="text-xl" />
         </button>
         <div className="w-1/3">
-          <img className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden" src={data.imageSrc} alt="" />
+          <img className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden" src={data.data.thumbnail} alt="" />
         </div>
-        <span className="relative text-3xl font-extrabold">{data.title.replace("Bahasa Indonesia", "")}</span>
+        <span className="relative text-3xl font-extrabold">{data.data.title.replace("Bahasa Indonesia", "")}</span>
       </div>
       <div className="flex items-center gap-1 pl-3 pb-3">
         <IoMdEye className="text-sm" />
-        <span className="text-xs">{data.followedBy.replace("Diikuti", "Dibaca")}</span>
+        <span className="text-xs">{data.data.chapter.length} Chapters</span>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaCalendarDays className="text-sm text-white" />
-          <span>{data.released}</span>
+          <span>{data.data.released}</span>
         </div>
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaUser className="text-sm text-white" />
-          <span>{data.author}</span>
+          <span>{data.data.author}</span>
         </div>
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
-          <FaPaintbrush className="text-sm text-white" />
-          <span>{data.artist}</span>
-        </div>
+
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaStar className="text-sm text-yellow-300" />
-          <span>{data.rating}</span>
+          <span>{data.data.rating}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
-        {data.genres.map((genre, index) => (
+        {data.data.genre.map((genre, index) => (
           <div className="text-sm bg-[#212121] px-3.5 py-1 rounded-full" key={index}>
-            {genre.genreName}
+            {genre.title}
           </div>
         ))}
       </div>
@@ -191,14 +188,14 @@ const KomikDetail = () => {
           <span className="text-lg font-semibold">Bagikan</span>
         </button>
       </div>
-      <p className="text-sm px-3">{data.synopsis}</p>
+      <p className="text-sm px-3">{data.data.description}</p>
 
       {/* Chapter List */}
       <div className="p-2">
         <span className="py-2 text-2xl font-extrabold">Chapter List :</span>
       </div>
       <div className="container max-h-[250px] flex flex-col overflow-y-auto gap-1 rounded-md p-2">
-        {data.chapters.map((chapter, index) => {
+        {data.data.chapter.map((chapter, index) => {
           const randomNumber = getRandomNumber(1, angka);
           return (
             <div className="mt-1" key={index}>
@@ -208,11 +205,11 @@ const KomikDetail = () => {
               </div>
               <NavLink
                 className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-bl-3xl rounded-tr-3xl"
-                to={`/chapter/${chapter.chapterLink.split("/")[3]}`}
+                to={`/chapter/${chapter.href.split("/")[1]}`}
               >
                 <div className="flex flex-col">
-                  <span className="font-bold">{chapter.chapterNum}</span>
-                  <span className="text-sm">{chapter.chapterDate}</span>
+                  <span className="font-bold">{chapter.title}</span>
+                  <span className="text-sm">{chapter.date}</span>
                 </div>
                 <FaReadme className="text-1xl" />
               </NavLink>
