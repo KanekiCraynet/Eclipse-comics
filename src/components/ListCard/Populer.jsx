@@ -1,35 +1,48 @@
 import { NavLink } from "react-router-dom"
-import getAnimeResponse from "@/libs/api-libs"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { FaStar } from "react-icons/fa6"
 
 const Populer = () => {
-    // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
-    const cachedData = localStorage.getItem('manhwa-popular');
-    const cachedTime = localStorage.getItem('manhwa-popular-time');
-    const currentTime = new Date().getTime();
-    const cacheExpiryTime = 2 * 60 * 1000; // 2 menit
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    let data = null;
-    let loading = false;
+    useEffect(() => {
+        // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
+        const cachedData = localStorage.getItem('manhwa-popular');
+        const cachedTime = localStorage.getItem('manhwa-popular-time');
+        const currentTime = new Date().getTime();
+        const cacheExpiryTime = 2 * 60 * 1000; // 2 menit
 
-    // Jika data ada dan tidak expired, gunakan data dari cache
-    if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
-        data = JSON.parse(cachedData);
-    } else {
-        // Ambil data dari API jika cache expired atau belum ada cache
-        const response = getAnimeResponse("popular");
-        loading = response.loading;
-        data = response.data;
-
-        // Simpan data dan waktu terakhir ambil data ke localStorage
-        if (data) {
-            localStorage.setItem('manhwa-popular', JSON.stringify(data));
-            localStorage.setItem('manhwa-popular-time', currentTime);
+        if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
+            setData(JSON.parse(cachedData));
+            setLoading(false);
+        } else {
+            // Ambil data dari API jika cache expired atau belum ada cache
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const response = await axios.get(`https://api-komikcast.vercel.app/popular`);
+                    setData(response.data);
+                    localStorage.setItem('manhwa-popular', JSON.stringify(response.data));
+                    localStorage.setItem('manhwa-popular-time', currentTime);
+                } catch (error) {
+                    console.error("Error :", error);
+                    setData([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchData();
         }
-    }
+    }, []);
 
     if (loading) {
         return <div></div>
+    }
+
+    if (!data || !Array.isArray(data)) {
+        return <div></div>;
     }
 
     return (

@@ -1,36 +1,49 @@
 import { NavLink } from "react-router-dom"
-import getAnimeResponse from "@/libs/api-libs"
+import { useState, useEffect } from "react"
+import axios from "axios"
 import { FaStar } from "react-icons/fa6"
 import LoadingMini from "@/components/LoadingMini"
 
 const Viewed = () => {
-    // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
-    const cachedData = localStorage.getItem('manhwa-recommendation');
-    const cachedTime = localStorage.getItem('manhwa-recommendation-time');
-    const currentTime = new Date().getTime();
-    const cacheExpiryTime = 2 * 60 * 1000; // 2 menit
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    let data = null;
-    let loading = false;
+    useEffect(() => {
+        // Cek apakah ada data yang sudah disimpan dalam localStorage dan belum expired
+        const cachedData = localStorage.getItem('manhwa-recommendation');
+        const cachedTime = localStorage.getItem('manhwa-recommendation-time');
+        const currentTime = new Date().getTime();
+        const cacheExpiryTime = 2 * 60 * 1000; // 2 menit
 
-    // Jika data ada dan tidak expired, gunakan data dari cache
-    if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
-        data = JSON.parse(cachedData);
-    } else {
-        // Ambil data dari API jika cache expired atau belum ada cache
-        const response = getAnimeResponse("recommended");
-        loading = response.loading;
-        data = response.data;
-
-        // Simpan data dan waktu terakhir ambil data ke localStorage
-        if (data) {
-            localStorage.setItem('manhwa-recommendation', JSON.stringify(data));
-            localStorage.setItem('manhwa-recommendation-time', currentTime);
+        if (cachedData && cachedTime && currentTime - cachedTime < cacheExpiryTime) {
+            setData(JSON.parse(cachedData));
+            setLoading(false);
+        } else {
+            // Ambil data dari API jika cache expired atau belum ada cache
+            const fetchData = async () => {
+                setLoading(true);
+                try {
+                    const response = await axios.get(`https://api-komikcast.vercel.app/recommended`);
+                    setData(response.data);
+                    localStorage.setItem('manhwa-recommendation', JSON.stringify(response.data));
+                    localStorage.setItem('manhwa-recommendation-time', currentTime);
+                } catch (error) {
+                    console.error("Error :", error);
+                    setData([]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchData();
         }
-    }
+    }, []);
 
     if (loading) {
         return <LoadingMini />
+    }
+
+    if (!data || !Array.isArray(data)) {
+        return <div></div>;
     }
 
     return (
