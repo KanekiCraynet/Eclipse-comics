@@ -26,7 +26,11 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
   const mountedRef = useRef(true);
 
   // Memoize dependencies to avoid spread element warning
+  // Using JSON.stringify to create stable reference for dependency array
   const dependenciesString = useMemo(() => JSON.stringify(dependencies), [dependencies]);
+  
+  // Note: dependenciesString is used to track changes in dependencies array
+  // We include it in dependency array to trigger re-fetch when dependencies change
 
   // Check cache first
   const getCachedData = useCallback(() => {
@@ -113,6 +117,9 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
     retries,
     retryDelay,
     getCachedData,
+    // Dependencies are stringified to avoid spread element warning
+    // We need dependenciesString to track changes in dependencies array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     dependenciesString,
   ]);
 

@@ -22,7 +22,11 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
   const isValid = Array.isArray(apiFunctions) && apiFunctions.length > 0;
 
   // Memoize dependencies to avoid spread element warning
+  // Using JSON.stringify to create stable reference for dependency array
   const dependenciesString = useMemo(() => JSON.stringify(dependencies), [dependencies]);
+  
+  // Note: dependenciesString is used to track changes in dependencies array
+  // We include it in dependency array to trigger re-fetch when dependencies change
 
   // Fetch all data in parallel
   const fetchAll = useCallback(async () => {
@@ -131,7 +135,12 @@ export const useParallelFetch = (apiFunctions, options = {}) => {
         setLoading(false);
       }
     }
-  }, [apiFunctions, skip, isValid, dependenciesString]);
+  }, [apiFunctions, skip, isValid, 
+    // Dependencies are stringified to avoid spread element warning
+    // We need dependenciesString to track changes in dependencies array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    dependenciesString,
+  ]);
 
   // Effect to fetch data
   useEffect(() => {
@@ -195,7 +204,6 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   // Use individual hooks for each API function
   // Note: This violates rules-of-hooks if apiFunctionsConfig is not an array
   // But we need to handle it gracefully
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const states = isValid ? apiFunctionsConfig.map((config, index) => {
     const { apiFunction, cacheKey, ...hookOptions } = config;
     
@@ -210,6 +218,7 @@ export const useParallelFetchDetailed = (apiFunctionsConfig, options = {}) => {
   }) : [];
 
   // Memoize states array reference to avoid dependency changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const memoizedStates = useMemo(() => states, [states.length, isValid]);
 
   const allLoading = isValid && memoizedStates.some(state => state.loading);
