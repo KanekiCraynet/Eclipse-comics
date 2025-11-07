@@ -1,6 +1,6 @@
 import Recomend from "@/components/ListCard/Recomend"
 import Update from "@/components/ListCard/Update"
-import Ongoing from "@/components/ListCard/Ongoing"
+import Popular from "@/components/ListCard/Popular"
 import GenreList from "@/components/ListCard/GenreList"
 import Populer from "@/components/ListCard/Populer"
 import Viewed from "@/components/ListCard/Viewed"
@@ -17,7 +17,7 @@ const KomikList = () => {
             </div>
             <Recomend />
             <Update />
-            <Ongoing />
+            <Popular />
             <GenreList />
             <Populer />
             <Viewed />

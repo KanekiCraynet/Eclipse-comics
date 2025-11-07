@@ -1,4 +1,4 @@
-import { FaFacebook,FaInstagram,FaTelegram } from "react-icons/fa"
+import { FaFacebook,FaInstagram } from "react-icons/fa"
 
 const Info = () => {
     return (

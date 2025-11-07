@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom"
 import { FaHome,FaSearch,FaHistory } from "react-icons/fa"
 import { FaBookmark,FaCircleInfo } from "react-icons/fa6"
+import PropTypes from "prop-types"
 
 const BottomNavbar = ({ route }) => {
     const getActive = (now) => (now === route.pathname ? "active" : "")
@@ -26,6 +27,12 @@ const BottomNavbar = ({ route }) => {
             </div>
         </div>
     )
+}
+
+BottomNavbar.propTypes = {
+    route: PropTypes.shape({
+        pathname: PropTypes.string.isRequired
+    }).isRequired
 }
 
 export default BottomNavbar

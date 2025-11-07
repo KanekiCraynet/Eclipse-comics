@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import useAnimeResponse from "@/libs/api-libs";
-import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaPaintbrush, FaReadme, FaRegCommentDots } from "react-icons/fa6";
+import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaPaintbrush, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
 import Loading from "@/components/Loading";
 
@@ -86,7 +86,6 @@ const KomikDetail = () => {
     );
   }
 
-  const genre = data?.genres?.map(genre => genre.genreName).join(", ") ?? "";
   const angka = parseInt(data?.followedBy.match(/\d+/)?.[0] || 0);
 
   const getRandomNumber = (min, max) => {

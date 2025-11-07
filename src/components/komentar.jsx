@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import CommentBox from 'commentbox.io/dist/commentBox.min.js';
+import { useEffect } from 'react';
 
 const Komentar = () => {
   useEffect(() => {

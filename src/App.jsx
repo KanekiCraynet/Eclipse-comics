@@ -1,9 +1,9 @@
-import { Analytics } from "@vercel/analytics/react"
 import { Route, Routes, useLocation } from "react-router-dom"
-import React, { lazy, Suspense } from "react"
+import { lazy, Suspense } from "react"
 import "@/index.css"
 import BottomNavbar from "@/components/BottomNavbar"
 import Loading from "@/components/Loading"
+import ErrorBoundary from "@/components/ErrorBoundary"
 
 const KomikList = lazy(() => import("@/components/KomikList"))
 const SearchKomik = lazy(() => import("@/components/SearchKomik"))
@@ -52,5 +52,9 @@ const App = () => {
     )
 }
 
-const AppWrapper = () => <App />
+const AppWrapper = () => (
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+)
 export default AppWrapper
