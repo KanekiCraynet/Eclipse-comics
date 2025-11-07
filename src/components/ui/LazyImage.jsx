@@ -52,14 +52,15 @@ const LazyImage = ({
     );
 
     // Observe the image element
-    if (imgRef.current) {
-      observerRef.current.observe(imgRef.current);
+    const currentImgRef = imgRef.current;
+    if (currentImgRef) {
+      observerRef.current.observe(currentImgRef);
     }
 
     // Cleanup
     return () => {
-      if (observerRef.current && imgRef.current) {
-        observerRef.current.unobserve(imgRef.current);
+      if (observerRef.current && currentImgRef) {
+        observerRef.current.unobserve(currentImgRef);
       }
     };
   }, [normalizedSrc]);

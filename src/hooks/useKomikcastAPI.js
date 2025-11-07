@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { komikcastAPI } from '../services/api';
 import cacheManager from '../services/cacheManager';
 import { extractApiData } from '../utils/apiHelpers';
