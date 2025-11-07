@@ -57,8 +57,20 @@ const Update = () => {
                 {data.slice(0,21).map((komik, index) => {
                     const title = safeStringTrim(komik.title, 'Untitled');
                     const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
-                    const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
-                    const chapterTitle = safeStringTrim(komik.chapters?.[0]?.chapterTitle || komik.latestChapter, 'N/A');
+                    const endpoint = safeEndpoint(komik.endpoint || komik.href || komik.link || komik.url);
+                    const chapterTitle = safeStringTrim(
+                        komik.latestChapter || 
+                        komik.chapters?.[0]?.chapterTitle || 
+                        (Array.isArray(komik.chapter) && komik.chapter[0]?.title) ||
+                        komik.chapter || 
+                        'N/A'
+                    );
+
+                    // Clean chapter string - remove "Ch." and "Chapter" prefixes
+                    const cleanChapter = String(chapterTitle)
+                        .replace(/^Ch\.?\s*/i, '')
+                        .replace(/^Chapter\s*/i, '')
+                        .trim() || 'N/A';
 
                     return (
                         <NavLink
@@ -72,7 +84,7 @@ const Update = () => {
                             key={endpoint || index}
                         >
                             <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
-                                Ch. {String(chapterTitle).replace("Ch.", "").replace("Chapter", "").trim()}
+                                Ch. {cleanChapter}
                             </span>
                             <span className="absolute bottom-0 text-sm font-bold line-clamp-2 p-1">{title}</span>
                         </NavLink>

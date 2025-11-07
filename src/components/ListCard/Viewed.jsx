@@ -55,19 +55,25 @@ const Viewed = () => {
             <div className="flex items-center scroll-page gap-2 py-2">
                 {data.map((komik, index) => {
                     const title = safeStringTrim(komik.title, 'Untitled');
-                    const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
-                    const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
+                    const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);                                                           
+                    const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);                                                                   
                     const rating = String(komik.rating || '0');
-                    const chapter = safeStringTrim(komik.chapter || komik.latestChapter, 'N/A');
+                    const chapter = safeStringTrim(komik.chapter || komik.latestChapter, 'N/A');                                                                
+
+                    // Clean chapter string - remove "Ch." and "Chapter" prefixes to avoid "Ch. Ch.940"
+                    const cleanChapter = String(chapter)
+                        .replace(/^Ch\.?\s*/i, '')
+                        .replace(/^Chapter\s*/i, '')
+                        .trim() || 'N/A';
 
                     return (
                         <NavLink
-                            className="relative bg-cover inner-shadow-bottom w-auto min-w-[107px] md:min-w-36 h-36 md:h-48 rounded-lg cursor-pointer overflow-hidden"
+                            className="relative bg-cover inner-shadow-bottom w-auto min-w-[107px] md:min-w-36 h-36 md:h-48 rounded-lg cursor-pointer overflow-hidden"                                                                           
                             style={{backgroundImage: `url(${thumbnail})`}}
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {String(chapter).replace("Chapter","").trim()}</span>
+                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {cleanChapter}</span>
                             <div className="absolute top-[76px] left-0 flex items-center gap-1 p-1">
                                 <FaStar className="text-yellow-300 text-xs z-50" />
                                 <span className="text-white text-xs font-medium z-50">{rating.slice(0,3)}</span>

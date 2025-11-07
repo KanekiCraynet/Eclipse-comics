@@ -1,14 +1,14 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { NavLink } from "react-router-dom"
 import { useKomikcastAPI } from '@/hooks/useKomikcastAPI';
 import { komikcastAPI } from '@/services/api';
-import { safeStringTrim, safeImageUrl, safeEndpoint } from '@/utils/apiHelpers';
+import { safeStringTrim, safeImageUrl, safeEndpoint, extractApiData } from '@/utils/apiHelpers';
 import { FaStar } from "react-icons/fa6"
 import { KomikCardSkeleton } from '@/components/ui/LoadingSkeleton';
 import LazyImage from '@/components/ui/LazyImage';
 
 const Popular = () => {
-    const { data, loading, error, refetch } = useKomikcastAPI(
+    const { data: popularData, loading: popularLoading, error: popularError, refetch: refetchPopular } = useKomikcastAPI(
         () => komikcastAPI.getPopular(),
         {
             cacheKey: 'komik_popular',
@@ -16,6 +16,108 @@ const Popular = () => {
             enableCache: true,
         }
     );
+
+    const [enrichedData, setEnrichedData] = useState([]);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    // Fetch detail data for each popular comic to get thumbnail, rating, and chapter
+    // Note: /popular endpoint only returns title, href, genre, year - we need to fetch details                                                                           
+    useEffect(() => {
+        if (!popularData || !Array.isArray(popularData) || popularData.length === 0) {                                                                          
+            setEnrichedData([]);
+            return;
+        }
+
+        const fetchDetails = async () => {
+            setLoadingDetails(true);
+            try {
+                // Limit to first 9 comics to avoid too many API calls
+                const comicsToFetch = popularData.slice(0, 9);
+                
+                // Fetch details in parallel
+                const detailPromises = comicsToFetch.map(async (komik) => {
+                    try {
+                        // Extract endpoint from href (e.g., "/murim-login/" -> "murim-login")
+                        const href = komik.href || komik.link || komik.url || '';
+                        const endpoint = safeEndpoint(href);
+                        
+                        if (!endpoint) {
+                            return {
+                                ...komik,
+                                endpoint: '',
+                                thumbnail: '',
+                                rating: '0',
+                                latestChapter: 'N/A',
+                            };
+                        }
+                        
+                        const detailResponse = await komikcastAPI.getDetail(endpoint, {                                                                         
+                            enableDeduplication: true,
+                        });
+                        const detailData = extractApiData(detailResponse);
+                        
+                        // Extract chapter from chapter array (first item is latest)
+                        const latestChapter = detailData?.chapter?.[0]?.title || 
+                                            detailData?.latestChapter || 
+                                            'N/A';
+                        
+                        // Clean chapter string
+                        const cleanChapter = String(latestChapter)
+                            .replace(/^Ch\.?\s*/i, '')
+                            .replace(/^Chapter\s*/i, '')
+                            .trim() || 'N/A';
+                        
+                        // Merge popular data with detail data
+                        return {
+                            ...komik,
+                            title: detailData?.title || komik.title || 'Untitled',
+                            thumbnail: detailData?.thumbnail || '',
+                            rating: detailData?.rating || '0',
+                            latestChapter: cleanChapter,
+                            endpoint: endpoint,
+                        };
+                    } catch (error) {
+                        // If detail fetch fails, return original data with defaults
+                        console.warn(`Failed to fetch detail for ${komik.title}:`, error);                                                                      
+                        const href = komik.href || komik.link || komik.url || '';
+                        const endpoint = safeEndpoint(href);
+                        return {
+                            ...komik,
+                            endpoint: endpoint,
+                            thumbnail: '',
+                            rating: '0',
+                            latestChapter: 'N/A',
+                        };
+                    }
+                });
+
+                const enriched = await Promise.all(detailPromises);
+                setEnrichedData(enriched);
+            } catch (error) {
+                console.error('Error fetching comic details:', error);
+                // Fallback to original data if all fails
+                setEnrichedData(popularData.slice(0, 9).map(komik => {
+                    const href = komik.href || komik.link || komik.url || '';
+                    const endpoint = safeEndpoint(href);
+                    return {
+                        ...komik,
+                        endpoint: endpoint,
+                        thumbnail: '',
+                        rating: '0',
+                        latestChapter: 'N/A',
+                    };
+                }));
+            } finally {
+                setLoadingDetails(false);
+            }
+        };
+
+        fetchDetails();
+    }, [popularData]);
+
+    const loading = popularLoading || loadingDetails;
+    const error = popularError;
+    const data = enrichedData.length > 0 ? enrichedData : (popularData || []);
 
     if (loading) {
         return (
@@ -33,7 +135,7 @@ const Popular = () => {
                 <div className="flex items-center justify-center py-4">
                     <p className="text-red-500 text-center mb-2">{error}</p>
                     <button
-                        onClick={refetch}
+                        onClick={refetchPopular}
                         className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
                     >
                         Try Again
@@ -60,10 +162,21 @@ const Popular = () => {
             <div className="flex items-center scroll-page gap-2 py-2">
                 {data.map((komik, index) => {
                     const title = safeStringTrim(komik.title, 'Untitled');
-                    const thumbnail = safeImageUrl(komik.imageSrc || komik.image || komik.thumbnail);
-                    const endpoint = safeEndpoint(komik.link || komik.endpoint || komik.url);
+                    const thumbnail = safeImageUrl(komik.thumbnail || komik.imageSrc || komik.image);                                                           
+                    const endpoint = safeEndpoint(komik.endpoint || komik.href || komik.link || komik.url);                                                     
                     const rating = String(komik.rating || '0');
-                    const chapter = safeStringTrim(komik.chapter || komik.latestChapter, 'N/A');
+                    const chapter = safeStringTrim(
+                        komik.latestChapter || 
+                        komik.chapter || 
+                        (Array.isArray(komik.chapter) && komik.chapter[0]?.title) ||                                                                            
+                        'N/A'
+                    );
+
+                    // Clean chapter string - remove "Ch." and "Chapter" prefixes
+                    const cleanChapter = String(chapter)
+                        .replace(/^Ch\.?\s*/i, '')
+                        .replace(/^Chapter\s*/i, '')
+                        .trim() || 'N/A';
 
                     return (
                         <NavLink
@@ -73,10 +186,10 @@ const Popular = () => {
                                 boxShadow: 'inset 0 -40px 20px rgba(0, 0, 0, 0.9)'
                             }}
                             to={`/komik/${endpoint}`}
-                            key={komik.endpoint || komik.link || index}
+                            key={endpoint || index}
                         >
                             <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
-                                Ch. {String(chapter).replace("Chapter", "").trim()}
+                                Ch. {cleanChapter}
                             </span>
                             <div className="absolute bottom-0 left-0 p-1">
                                 <div className="flex flex-col gap-1">
