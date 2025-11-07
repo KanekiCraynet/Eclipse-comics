@@ -4,6 +4,10 @@ import { FaBookmark,FaCircleInfo } from "react-icons/fa6"
 import PropTypes from "prop-types"
 
 const BottomNavbar = ({ route }) => {
+    if (!route || !route.pathname) {
+        console.warn('BottomNavbar: route.pathname is required');
+        return null;
+    }
     const getActive = (now) => (now === route.pathname ? "active" : "")
 
     return (
@@ -21,7 +25,7 @@ const BottomNavbar = ({ route }) => {
                 <NavLink to="/history" className={`nav-links relative flex items-center justify-center grow p-2.5 ${getActive("/history")}`}>
                     <FaHistory className="text-xl" />
                 </NavLink>
-                <NavLink to="/info" className={`nav-links relative flex items-center justify-center grow p-2.5 ${getActive("/setting")}`}>
+                <NavLink to="/info" className={`nav-links relative flex items-center justify-center grow p-2.5 ${getActive("/info")}`}>
                     <FaCircleInfo className="text-xl" />
                 </NavLink>
             </div>

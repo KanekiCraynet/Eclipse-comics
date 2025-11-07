@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { validateApiResponse } from '../utils/apiHelpers';
 
-export const useFetch = (apiFunction, dependencies = []) => {
+export const useFetch = (apiFunction) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,9 +25,11 @@ export const useFetch = (apiFunction, dependencies = []) => {
     }
   }, [apiFunction]);
 
+  // Note: Any external deps should be closed over in apiFunction so fetchData
+  // identity changes when needed. Keep deps minimal to satisfy eslint.
   useEffect(() => {
     fetchData();
-  }, [fetchData, ...dependencies]);
+  }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
 };

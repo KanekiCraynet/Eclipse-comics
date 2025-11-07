@@ -1,5 +1,5 @@
-import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
+import { NavLink, useNavigate, useParams } from "react-router-dom";
 import useAnimeResponse from "@/libs/api-libs";
 import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
@@ -9,7 +9,7 @@ const KomikDetail = () => {
   const [isBookmark, setIsBookmark] = useState(false);
   const navigate = useNavigate();
   const { komik } = useParams();
-  const { data, loading, error } = useAnimeResponse(`detail/${komik}`);
+  const { data, loading, error } = useAnimeResponse(`detail/${komik}`) || {};
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
 
@@ -88,6 +88,19 @@ const KomikDetail = () => {
 
   const angka = data?.data?.chapter?.length || 0;
 
+  // Fallback image when API thumbnail is missing or relative
+  const DEFAULT_THUMBNAIL = "https://files.catbox.moe/hu8n6y.jpg";
+  const getThumbnailUrl = (thumb) => {
+    if (!thumb) return DEFAULT_THUMBNAIL;
+    try {
+      // If it's an absolute URL, use it; otherwise use default
+      const isAbsolute = /^https?:\/\//i.test(thumb);
+      return isAbsolute ? thumb : DEFAULT_THUMBNAIL;
+    } catch {
+      return DEFAULT_THUMBNAIL;
+    }
+  };
+
   const getRandomNumber = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
@@ -127,18 +140,28 @@ const KomikDetail = () => {
   return (
     <div>
       <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-2">
-        <img className="absolute top-0 w-screen h-52 blur-2xl" src={data.data.thumbnail} />
+        <img
+          className="absolute top-0 w-screen h-52 blur-2xl"
+          src={getThumbnailUrl(data?.data?.thumbnail)}
+          alt={`${data?.data?.title || 'thumbnail'} background`}
+          onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_THUMBNAIL; }}
+        />
         <button className="absolute top-2 left-3" onClick={() => navigate(-1)}>
           <FaArrowLeft className="text-xl" />
         </button>
         <div className="w-1/3">
-          <img className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden" src={data.data.thumbnail} alt="" />
+          <img
+            className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden"
+            src={getThumbnailUrl(data?.data?.thumbnail)}
+            alt={data?.data?.title || 'komik thumbnail'}
+            onError={(e) => { e.target.onerror = null; e.target.src = DEFAULT_THUMBNAIL; }}
+          />
         </div>
         <span className="relative text-3xl font-extrabold">{data.data.title.replace("Bahasa Indonesia", "")}</span>
       </div>
       <div className="flex items-center gap-1 pl-3 pb-3">
         <IoMdEye className="text-sm" />
-        <span className="text-xs">{data.data.chapter.length} Chapters</span>
+        <span className="text-xs">{(data?.data?.chapter || []).length} Chapters</span>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
@@ -152,11 +175,11 @@ const KomikDetail = () => {
 
         <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
           <FaStar className="text-sm text-yellow-300" />
-          <span>{data.data.rating}</span>
+          <span>{data?.data?.rating ?? "N/A"}</span>
         </div>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
-        {data.data.genre.map((genre, index) => (
+        {(data?.data?.genre || []).map((genre, index) => (
           <div className="text-sm bg-[#212121] px-3.5 py-1 rounded-full" key={index}>
             {genre.title}
           </div>
@@ -195,8 +218,8 @@ const KomikDetail = () => {
         <span className="py-2 text-2xl font-extrabold">Chapter List :</span>
       </div>
       <div className="container max-h-[250px] flex flex-col overflow-y-auto gap-1 rounded-md p-2">
-        {data.data.chapter.map((chapter, index) => {
-          const randomNumber = getRandomNumber(1, angka);
+        {(data?.data?.chapter || []).map((chapter, index) => {
+          const randomNumber = getRandomNumber(1, Math.max(1, angka));
           return (
             <div className="mt-1" key={index}>
               <div className="flex items-center gap-1 pb-1 pl-1">
@@ -205,7 +228,7 @@ const KomikDetail = () => {
               </div>
               <NavLink
                 className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-bl-3xl rounded-tr-3xl"
-                to={`/chapter/${chapter.href.split("/")[1]}`}
+                to={`/chapter/${(chapter?.href || "").split("/")[1] || ""}`}
               >
                 <div className="flex flex-col">
                   <span className="font-bold">{chapter.title}</span>
@@ -227,4 +250,4 @@ const KomikDetail = () => {
   );
 };
 
-export default KomikDetail;
+export default KomikDetail

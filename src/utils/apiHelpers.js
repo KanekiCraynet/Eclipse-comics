@@ -33,6 +33,9 @@ export const safeImageUrl = (url, fallback = 'data:image/jpeg;base64,/9j/4AAQSkZ
   if (!url || typeof url !== 'string') {
     return fallback;
   }
+  // Only allow absolute http(s) URLs. If the API gives a relative path (e.g. '/placeholder.jpg'), use the fallback
+  const isAbsolute = /^https?:\/\//i.test(url);
+  if (!isAbsolute) return fallback;
   // Remove resize parameters if present
   return url.split('?')[0];
 };
