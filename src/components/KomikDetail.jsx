@@ -14,6 +14,13 @@ const KomikDetail = () => {
   const navigate = useNavigate();
   const { komik } = useParams();
   
+  // Validate komik endpoint - redirect to home if empty or invalid
+  useEffect(() => {
+    if (!komik || komik.trim() === '') {
+      navigate('/', { replace: true });
+    }
+  }, [komik, navigate]);
+  
   // Use unified hook with caching
   // Data is already extracted by useKomikcastAPI using extractApiData
   const { data, loading, error, refetch } = useKomikcastAPI(
@@ -22,6 +29,7 @@ const KomikDetail = () => {
       cacheKey: `komik_detail_${komik}`,
       cacheTTL: 30 * 60 * 1000, // 30 minutes
       enableCache: true,
+      skip: !komik || komik.trim() === '', // Skip API call if endpoint is invalid
     }
   );
   

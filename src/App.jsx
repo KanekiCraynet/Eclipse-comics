@@ -45,7 +45,7 @@ const App = () => {
                     <Route path="/info" element={<Info />} />
                     <Route path="/setting" element={<Setting />} />
                     <Route path="/genres/:genre" element={<Genres />} />
-                    <Route path="/komik" element={<Navigate to="/komik/" replace />} />
+                    <Route path="/komik" element={<Navigate to="/" replace />} />
                     <Route path="/komik/:komik" element={<KomikDetail />} />
                     <Route path="/chapter/:chapter" element={<ChapterDetail />} />
                 </Routes>
