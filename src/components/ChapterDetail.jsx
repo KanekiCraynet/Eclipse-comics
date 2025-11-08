@@ -547,11 +547,11 @@ const ChapterDetail = () => {
                 {images.length > 0 ? (
                     images.map((image, index) => {
                         const imageUrl = safeImageUrl(image);
-                        // Use original image URL or index for stable key generation
-                        // Prefer using the original image string if available, otherwise use index
-                        const stableKey = typeof image === 'string' 
-                          ? `image-${index}-${image.substring(0, 50)}` // Use first 50 chars of original URL
-                          : `image-${index}`;
+                        // Use normalized imageUrl for stable key generation
+                        // safeImageUrl always returns a string (normalized URL or fallback), so this works for all image types
+                        // This ensures stable keys regardless of whether image is a string or object
+                        // Include index to ensure uniqueness in case of duplicate URLs
+                        const stableKey = `image-${index}-${imageUrl}`;
                         
                         // eslint-disable-next-line no-undef
                         if (process.env.NODE_ENV === 'development' && index === 0) {
