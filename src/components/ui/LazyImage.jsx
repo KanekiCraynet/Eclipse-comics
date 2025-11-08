@@ -207,7 +207,6 @@ const LazyImage = ({
             onLoad={handleLoad}
             onError={handleError}
             referrerPolicy="no-referrer"
-            crossOrigin="anonymous"
             className={`transition-opacity duration-300 ${
               isLoading ? 'opacity-0' : 'opacity-100'
             } ${hasError ? 'opacity-50' : ''}`}
@@ -250,7 +249,6 @@ const LazyImage = ({
         onLoad={handleLoad}
         onError={handleError}
         referrerPolicy="no-referrer"
-        crossOrigin="anonymous"
         className={`transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         } ${hasError ? 'opacity-50' : ''}`}
