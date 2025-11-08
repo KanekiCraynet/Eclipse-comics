@@ -57,27 +57,30 @@ const ChapterDetail = () => {
     // 1. Array: [{ title: "...", panel: [...] }]
     // 2. Object: { title: "...", panel: [...] }
     // 3. Array of arrays: [[{ title: "...", panel: [...] }]]
-    let chapterResponse = null;
-    
-    if (chapterData) {
+    // Memoized to prevent unnecessary recalculations and ensure stable reference
+    const chapterResponse = useMemo(() => {
+      if (!chapterData) return null;
+      
       if (Array.isArray(chapterData)) {
         if (chapterData.length > 0) {
           // Check if first element is an object with panel/images
           if (typeof chapterData[0] === 'object' && chapterData[0] !== null) {
-            chapterResponse = chapterData[0];
+            return chapterData[0];
           } else if (Array.isArray(chapterData[0]) && chapterData[0].length > 0) {
             // Nested array case: [[{ title: "...", panel: [...] }]]
-            chapterResponse = chapterData[0][0];
+            return chapterData[0][0];
           } else {
             // Fallback: use first element as-is
-            chapterResponse = chapterData[0];
+            return chapterData[0];
           }
         }
       } else if (typeof chapterData === 'object' && chapterData !== null) {
         // Direct object format
-        chapterResponse = chapterData;
+        return chapterData;
       }
-    }
+      
+      return null;
+    }, [chapterData]);
     
     const komikResponse = komikData;
 
@@ -292,45 +295,50 @@ const ChapterDetail = () => {
 
     // Extract panel images from chapter response (API returns { title: "...", panel: [...] })
     // Handle multiple possible data structures
-    let images = [];
-    
-    if (chapterResponse) {
-      // Primary: check panel array
-      if (Array.isArray(chapterResponse.panel) && chapterResponse.panel.length > 0) {
-        images = chapterResponse.panel;
-      } 
-      // Secondary: check images array
-      else if (Array.isArray(chapterResponse.images) && chapterResponse.images.length > 0) {
-        images = chapterResponse.images;
+    // Memoized to prevent unnecessary re-renders and useEffect re-executions
+    const images = useMemo(() => {
+      let extractedImages = [];
+      
+      if (chapterResponse) {
+        // Primary: check panel array
+        if (Array.isArray(chapterResponse.panel) && chapterResponse.panel.length > 0) {
+          extractedImages = chapterResponse.panel;
+        } 
+        // Secondary: check images array
+        else if (Array.isArray(chapterResponse.images) && chapterResponse.images.length > 0) {
+          extractedImages = chapterResponse.images;
+        }
+        // Fallback: check if chapterResponse itself is an array of URLs
+        else if (Array.isArray(chapterResponse) && chapterResponse.length > 0 && typeof chapterResponse[0] === 'string') {
+          extractedImages = chapterResponse;
+        }
       }
-      // Fallback: check if chapterResponse itself is an array of URLs
-      else if (Array.isArray(chapterResponse) && chapterResponse.length > 0 && typeof chapterResponse[0] === 'string') {
-        images = chapterResponse;
-      }
-    }
-    
-    // Additional fallback: if images is still empty, try to extract from chapterData directly
-    if (images.length === 0 && chapterData) {
-      if (Array.isArray(chapterData) && chapterData.length > 0) {
-        const firstItem = chapterData[0];
-        if (firstItem && typeof firstItem === 'object') {
-          if (Array.isArray(firstItem.panel) && firstItem.panel.length > 0) {
-            images = firstItem.panel;
-          } else if (Array.isArray(firstItem.images) && firstItem.images.length > 0) {
-            images = firstItem.images;
+      
+      // Additional fallback: if images is still empty, try to extract from chapterData directly
+      if (extractedImages.length === 0 && chapterData) {
+        if (Array.isArray(chapterData) && chapterData.length > 0) {
+          const firstItem = chapterData[0];
+          if (firstItem && typeof firstItem === 'object') {
+            if (Array.isArray(firstItem.panel) && firstItem.panel.length > 0) {
+              extractedImages = firstItem.panel;
+            } else if (Array.isArray(firstItem.images) && firstItem.images.length > 0) {
+              extractedImages = firstItem.images;
+            }
+          } else if (Array.isArray(firstItem) && firstItem.length > 0 && typeof firstItem[0] === 'string') {
+            // First item is array of URLs
+            extractedImages = firstItem;
           }
-        } else if (Array.isArray(firstItem) && firstItem.length > 0 && typeof firstItem[0] === 'string') {
-          // First item is array of URLs
-          images = firstItem;
-        }
-      } else if (typeof chapterData === 'object' && chapterData !== null) {
-        if (Array.isArray(chapterData.panel) && chapterData.panel.length > 0) {
-          images = chapterData.panel;
-        } else if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
-          images = chapterData.images;
+        } else if (typeof chapterData === 'object' && chapterData !== null) {
+          if (Array.isArray(chapterData.panel) && chapterData.panel.length > 0) {
+            extractedImages = chapterData.panel;
+          } else if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
+            extractedImages = chapterData.images;
+          }
         }
       }
-    }
+      
+      return extractedImages;
+    }, [chapterResponse, chapterData]);
     
     // Debug logging for images
     useEffect(() => {
