@@ -296,8 +296,10 @@ const ChapterDetail = () => {
     // Extract panel images from chapter response (API returns { title: "...", panel: [...] })
     // Handle multiple possible data structures
     // Memoized to prevent unnecessary re-renders and useEffect re-executions
+    // Returns stable array reference - empty array is reused to prevent unnecessary re-renders
+    const emptyArrayRef = useRef([]);
     const images = useMemo(() => {
-      let extractedImages = [];
+      let extractedImages = null;
       
       if (chapterResponse) {
         // Primary: check panel array
@@ -315,7 +317,7 @@ const ChapterDetail = () => {
       }
       
       // Additional fallback: if images is still empty, try to extract from chapterData directly
-      if (extractedImages.length === 0 && chapterData) {
+      if (!extractedImages && chapterData) {
         if (Array.isArray(chapterData) && chapterData.length > 0) {
           const firstItem = chapterData[0];
           if (firstItem && typeof firstItem === 'object') {
@@ -337,45 +339,57 @@ const ChapterDetail = () => {
         }
       }
       
-      return extractedImages;
+      // Return extracted images or stable empty array reference
+      return extractedImages || emptyArrayRef.current;
     }, [chapterResponse, chapterData]);
     
     // Debug logging for images
+    // Only log when images array actually changes, not on every render
+    // Since images is memoized, it will only change when chapterResponse or chapterData changes
+    const imagesLengthRef = useRef(0);
     useEffect(() => {
+      // Only log if images length changed or if we're in development and want detailed logs
       // eslint-disable-next-line no-undef
       if (process.env.NODE_ENV === 'development') {
-        if (images.length > 0) {
-          console.log('[ChapterDetail] Images extracted successfully:', {
-            count: images.length,
-            firstImage: images[0],
-            lastImage: images[images.length - 1],
-            firstImageType: typeof images[0],
-            isValidUrl: images[0] && typeof images[0] === 'string' && images[0].startsWith('http'),
-          });
-        } else {
-          console.warn('[ChapterDetail] No images found - Debugging info:', {
-            extractedImagesLength: images.length,
-            chapterResponse: chapterResponse,
-            chapterResponseType: typeof chapterResponse,
-            chapterResponseKeys: chapterResponse && typeof chapterResponse === 'object' ? Object.keys(chapterResponse) : 'N/A',
-            chapterData: chapterData,
-            chapterDataType: typeof chapterData,
-            chapterDataIsArray: Array.isArray(chapterData),
-            chapterDataLength: Array.isArray(chapterData) ? chapterData.length : 'N/A',
-            hasPanel: !!chapterResponse?.panel,
-            panelType: typeof chapterResponse?.panel,
-            panelIsArray: Array.isArray(chapterResponse?.panel),
-            panelLength: Array.isArray(chapterResponse?.panel) ? chapterResponse.panel.length : 'N/A',
-            hasImages: !!chapterResponse?.images,
-            imagesType: typeof chapterResponse?.images,
-            imagesIsArray: Array.isArray(chapterResponse?.images),
-            chapterResponseImagesLength: Array.isArray(chapterResponse?.images) ? chapterResponse.images.length : 'N/A',
-            loading: loading,
-            error: error,
-          });
+        const lengthChanged = imagesLengthRef.current !== images.length;
+        imagesLengthRef.current = images.length;
+        
+        // Only log on significant changes to avoid spam
+        if (lengthChanged || images.length === 0) {
+          if (images.length > 0) {
+            console.log('[ChapterDetail] Images extracted successfully:', {
+              count: images.length,
+              firstImage: images[0],
+              lastImage: images[images.length - 1],
+              firstImageType: typeof images[0],
+              isValidUrl: images[0] && typeof images[0] === 'string' && images[0].startsWith('http'),
+            });
+          } else if (!loading && !error) {
+            // Only warn if we're not loading and there's no error (data loaded but no images)
+            console.warn('[ChapterDetail] No images found - Debugging info:', {
+              extractedImagesLength: images.length,
+              chapterResponse: chapterResponse,
+              chapterResponseType: typeof chapterResponse,
+              chapterResponseKeys: chapterResponse && typeof chapterResponse === 'object' ? Object.keys(chapterResponse) : 'N/A',
+              chapterData: chapterData,
+              chapterDataType: typeof chapterData,
+              chapterDataIsArray: Array.isArray(chapterData),
+              chapterDataLength: Array.isArray(chapterData) ? chapterData.length : 'N/A',
+              hasPanel: !!chapterResponse?.panel,
+              panelType: typeof chapterResponse?.panel,
+              panelIsArray: Array.isArray(chapterResponse?.panel),
+              panelLength: Array.isArray(chapterResponse?.panel) ? chapterResponse.panel.length : 'N/A',
+              hasImages: !!chapterResponse?.images,
+              imagesType: typeof chapterResponse?.images,
+              imagesIsArray: Array.isArray(chapterResponse?.images),
+              chapterResponseImagesLength: Array.isArray(chapterResponse?.images) ? chapterResponse.images.length : 'N/A',
+              loading: loading,
+              error: error,
+            });
+          }
         }
       }
-    }, [images, chapterResponse, chapterData, loading, error]);
+    }, [images, loading, error, chapterResponse, chapterData]); // images is memoized, so this won't cause excessive re-runs
     const chapterTitle = safeStringTrim(chapterResponse?.title, "Chapter");
     const chapterNumber = chapterTitle.split("Chapter ")[1] || "";
     const komikTitle = safeStringTrim(komikResponse?.title?.replace("Bahasa Indonesia", ""), "Unknown");
@@ -533,6 +547,12 @@ const ChapterDetail = () => {
                 {images.length > 0 ? (
                     images.map((image, index) => {
                         const imageUrl = safeImageUrl(image);
+                        // Use original image URL or index for stable key generation
+                        // Prefer using the original image string if available, otherwise use index
+                        const stableKey = typeof image === 'string' 
+                          ? `image-${index}-${image.substring(0, 50)}` // Use first 50 chars of original URL
+                          : `image-${index}`;
+                        
                         // eslint-disable-next-line no-undef
                         if (process.env.NODE_ENV === 'development' && index === 0) {
                           console.log('[ChapterDetail] Rendering first image:', {
@@ -544,7 +564,7 @@ const ChapterDetail = () => {
                         }
                         return (
                           <LazyImage
-                            key={`image-${index}-${imageUrl}`}
+                            key={stableKey}
                             className={readingModeStyles.image}
                             src={imageUrl}
                             alt={`${chapterTitle} - Page ${index + 1}`}
