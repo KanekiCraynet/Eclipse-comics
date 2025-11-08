@@ -291,89 +291,46 @@ const ChapterDetail = () => {
     };
 
     // Extract panel images from chapter response (API returns { title: "...", panel: [...] })
-    // Handle multiple possible data structures including deeply nested arrays
-    // Use useMemo to avoid recalculating on every render
-    const images = useMemo(() => {
-      // Helper function to recursively extract image URLs from nested structures
-      const extractImageUrls = (data) => {
-        if (!data) return [];
-        
-        // If it's a string and looks like a URL, return it as array
-        if (typeof data === 'string' && (data.startsWith('http://') || data.startsWith('https://'))) {
-          return [data.trim()];
-        }
-        
-        // If it's an array, check if all elements are URLs (flat array)
-        if (Array.isArray(data)) {
-          // Check if it's a flat array of URLs
-          if (data.length > 0 && typeof data[0] === 'string' && (data[0].startsWith('http://') || data[0].startsWith('https://'))) {
-            return data
-              .filter(url => typeof url === 'string' && url.trim())
-              .map(url => url.trim())
-              .filter(url => url.startsWith('http://') || url.startsWith('https://'));
-          }
-          // If first element is an object, try to extract from each object
-          if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
-            // Try to find panel or images in first object
-            const firstItem = data[0];
-            if (Array.isArray(firstItem.panel) && firstItem.panel.length > 0) {
-              return extractImageUrls(firstItem.panel);
-            }
-            if (Array.isArray(firstItem.images) && firstItem.images.length > 0) {
-              return extractImageUrls(firstItem.images);
-            }
-            // Recursively check nested arrays
-            if (Array.isArray(firstItem)) {
-              return extractImageUrls(firstItem);
-            }
-          }
-          // Recursively check nested arrays
-          const flattened = [];
-          for (const item of data) {
-            const extracted = extractImageUrls(item);
-            if (Array.isArray(extracted) && extracted.length > 0) {
-              flattened.push(...extracted);
-            }
-          }
-          return flattened.length > 0 ? flattened : [];
-        }
-        
-        // If it's an object, check for panel or images property
-        if (typeof data === 'object' && data !== null) {
-          if (Array.isArray(data.panel) && data.panel.length > 0) {
-            return extractImageUrls(data.panel);
-          }
-          if (Array.isArray(data.images) && data.images.length > 0) {
-            return extractImageUrls(data.images);
-          }
-        }
-        
-        return [];
-      };
-      
-      let extractedImages = [];
-      
-      // Try to extract images from chapterResponse first
-      if (chapterResponse) {
-        extractedImages = extractImageUrls(chapterResponse);
+    // Handle multiple possible data structures
+    let images = [];
+    
+    if (chapterResponse) {
+      // Primary: check panel array
+      if (Array.isArray(chapterResponse.panel) && chapterResponse.panel.length > 0) {
+        images = chapterResponse.panel;
+      } 
+      // Secondary: check images array
+      else if (Array.isArray(chapterResponse.images) && chapterResponse.images.length > 0) {
+        images = chapterResponse.images;
       }
-      
-      // If still empty, try chapterData directly
-      if (extractedImages.length === 0 && chapterData) {
-        extractedImages = extractImageUrls(chapterData);
+      // Fallback: check if chapterResponse itself is an array of URLs
+      else if (Array.isArray(chapterResponse) && chapterResponse.length > 0 && typeof chapterResponse[0] === 'string') {
+        images = chapterResponse;
       }
-      
-      // Filter out any invalid URLs and normalize them
-      const validImages = extractedImages
-        .filter(img => {
-          if (typeof img !== 'string') return false;
-          const url = img.trim();
-          return url.startsWith('http://') || url.startsWith('https://');
-        })
-        .map(img => img.trim()); // Ensure all URLs are trimmed
-      
-      return validImages;
-    }, [chapterResponse, chapterData]);
+    }
+    
+    // Additional fallback: if images is still empty, try to extract from chapterData directly
+    if (images.length === 0 && chapterData) {
+      if (Array.isArray(chapterData) && chapterData.length > 0) {
+        const firstItem = chapterData[0];
+        if (firstItem && typeof firstItem === 'object') {
+          if (Array.isArray(firstItem.panel) && firstItem.panel.length > 0) {
+            images = firstItem.panel;
+          } else if (Array.isArray(firstItem.images) && firstItem.images.length > 0) {
+            images = firstItem.images;
+          }
+        } else if (Array.isArray(firstItem) && firstItem.length > 0 && typeof firstItem[0] === 'string') {
+          // First item is array of URLs
+          images = firstItem;
+        }
+      } else if (typeof chapterData === 'object' && chapterData !== null) {
+        if (Array.isArray(chapterData.panel) && chapterData.panel.length > 0) {
+          images = chapterData.panel;
+        } else if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
+          images = chapterData.images;
+        }
+      }
+    }
     
     // Debug logging for images
     useEffect(() => {
@@ -585,38 +542,29 @@ const ChapterDetail = () => {
                             alt={`${chapterTitle} - Page ${index + 1}`}
                             onClick={handleImageClick}
                             loading={index < 3 ? "eager" : "lazy"} // Load first 3 images eagerly for better UX
+                            onError={(e) => {
+                              // eslint-disable-next-line no-undef
+                              if (process.env.NODE_ENV === 'development') {
+                                console.error(`[ChapterDetail] Failed to load image ${index + 1}:`, {
+                                  index,
+                                  imageUrl,
+                                  error: e,
+                                });
+                              }
+                            }}
                           />
                         );
                     })
                 ) : (
                     <div className="min-h-screen flex items-center justify-center px-4">
-                        <div className="text-center max-w-md">
-                            <p className="text-red-500 mb-2 text-lg font-semibold">Gambar tidak ditemukan</p>
-                            <p className="text-gray-400 text-sm mb-4">
-                                Tidak ada gambar yang dapat ditampilkan untuk chapter ini. 
-                                Data mungkin belum tersedia atau format data tidak sesuai.
-                            </p>
+                        <div className="text-center">
+                            <p className="text-gray-500 mb-2">No images available</p>
                             {/* eslint-disable-next-line no-undef */}
                             {process.env.NODE_ENV === 'development' && (
-                                <div className="text-gray-600 text-xs mt-4 p-4 bg-gray-800 rounded text-left">
-                                    <p><strong>Debug Info:</strong></p>
-                                    <p>images.length = {images.length}</p>
-                                    <p>chapterResponse = {chapterResponse ? 'exists' : 'null'}</p>
-                                    <p>chapterData = {chapterData ? (Array.isArray(chapterData) ? `Array(${chapterData.length})` : 'object') : 'null'}</p>
-                                    {chapterResponse && (
-                                        <p>chapterResponse keys = {Object.keys(chapterResponse).join(', ')}</p>
-                                    )}
-                                    {chapterData && Array.isArray(chapterData) && chapterData.length > 0 && (
-                                        <p>chapterData[0] keys = {typeof chapterData[0] === 'object' && chapterData[0] ? Object.keys(chapterData[0]).join(', ') : 'N/A'}</p>
-                                    )}
-                                </div>
+                                <p className="text-gray-600 text-xs mt-2">
+                                    Debug: images.length = {images.length}, chapterResponse = {chapterResponse ? 'exists' : 'null'}
+                                </p>
                             )}
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors mt-4"
-                            >
-                                Kembali
-                            </button>
                         </div>
                     </div>
                 )}

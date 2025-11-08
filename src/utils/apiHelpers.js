@@ -281,36 +281,17 @@ export const safeStringTrim = (str, fallback = '') => {
  * Safe image URL validation and normalization
  */
 export const safeImageUrl = (url, fallback = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/AD//2Q==') => {
-  if (!url) {
+  if (!url || typeof url !== 'string') {
     return fallback;
   }
-  
-  // Convert to string if it's not already
-  let urlString = String(url).trim();
-  
-  // Return fallback if empty after trimming
-  if (!urlString) {
-    return fallback;
-  }
-  
   try {
     // Only allow absolute http(s) URLs. If the API gives a relative path (e.g. '/placeholder.jpg'), use the fallback
-    // Check for both http:// and https:// with case-insensitive matching
-    const isAbsolute = /^https?:\/\//i.test(urlString);
-    if (!isAbsolute) {
-      // eslint-disable-next-line no-undef
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[API Helpers] Invalid image URL (not absolute):', urlString.substring(0, 50));
-      }
-      return fallback;
-    }
-    
-    // Remove resize parameters if present (optional - some CDNs need query params)
-    // For now, keep query parameters as they might be needed for some image services
-    // Just ensure the URL is valid
-    return urlString;
+    const isAbsolute = /^https?:\/\//i.test(url);
+    if (!isAbsolute) return fallback;
+    // Remove resize parameters if present
+    return url.split('?')[0];
   } catch (error) {
-    console.error('[API Helpers] Error processing image URL:', error, url);
+    console.error('[API Helpers] Error processing image URL:', error);
     return fallback;
   }
 };

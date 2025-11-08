@@ -50,6 +50,55 @@ const LazyImage = ({
     }
   }, [normalizedSrc, fallback, placeholder]);
 
+  useEffect(() => {
+    // If no IntersectionObserver support, load immediately
+    if (!window.IntersectionObserver) {
+      setImageSrc(normalizedSrc);
+      setIsLoading(true); // Set loading state when starting to load
+      return;
+    }
+
+    // Create intersection observer for lazy loading
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Image is in viewport, start loading
+            setImageSrc(normalizedSrc);
+            setIsLoading(true); // Set loading state when starting to load
+            const elementToUnobserve = containerRef.current || imgRef.current;
+            if (observerRef.current && elementToUnobserve) {
+              observerRef.current.unobserve(elementToUnobserve);
+            }
+          }
+        });
+      },
+      {
+        rootMargin: '100px', // Start loading 100px before image enters viewport (increased for better UX)
+        threshold: 0.01,
+      }
+    );
+
+    // Observe the container element (works for both picture and img)
+    const elementToObserve = containerRef.current || imgRef.current;
+    
+    if (elementToObserve) {
+      observerRef.current.observe(elementToObserve);
+    } else {
+      // If element is not available yet, load immediately as fallback
+      // This can happen if the component mounts before the DOM is ready
+      setImageSrc(normalizedSrc);
+      setIsLoading(true);
+    }
+
+    // Cleanup
+    return () => {
+      if (observerRef.current && elementToObserve) {
+        observerRef.current.unobserve(elementToObserve);
+      }
+    };
+  }, [normalizedSrc]);
+
   // Handle image load
   const handleLoad = (e) => {
     setIsLoading(false);
@@ -66,168 +115,58 @@ const LazyImage = ({
     }
   };
 
-  // Handle image error
+  // Handle image error with retry logic
   const handleError = (e) => {
-    setIsLoading(false);
-    setHasError(true);
     // eslint-disable-next-line no-undef
     if (process.env.NODE_ENV === 'development') {
       console.error('[LazyImage] Image error:', {
         src: e.target.src,
         alt: alt,
         currentSrc: e.target.currentSrc,
+        naturalWidth: e.target.naturalWidth,
+        naturalHeight: e.target.naturalHeight,
       });
     }
     
-    // Try fallback if current src is not already fallback
-    if (imageSrc !== fallback && imageSrc !== normalizedSrc) {
+    // If current src is the normalized src (first attempt), try loading again with a slight delay
+    if (imageSrc === normalizedSrc && imageSrc !== fallback) {
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[LazyImage] Retrying image load after 500ms...');
+      }
+      // Give a small delay before retrying (helps with temporary network issues)
+      setTimeout(() => {
+        setImageSrc(normalizedSrc);
+      }, 500);
+      return;
+    }
+    
+    // If retry failed or current src is not the normalized src, use fallback
+    if (imageSrc !== fallback) {
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[LazyImage] Using fallback image');
+      }
       setImageSrc(fallback);
-      setIsLoading(true); // Reset loading state for fallback
-    } else if (onError) {
-      onError(e);
+      setHasError(true);
+      setIsLoading(false);
+    } else {
+      // Already using fallback, mark as error
+      setHasError(true);
+      setIsLoading(false);
+      if (onError) {
+        onError(e);
+      }
     }
   };
 
-  // Main effect: Handle lazy loading with IntersectionObserver and fallbacks
+  // If loading is 'eager', load immediately
   useEffect(() => {
-    // If loading is eager, load immediately and skip IntersectionObserver
     if (loading === 'eager') {
       setImageSrc(normalizedSrc);
-      setIsLoading(true);
-      return;
+      setIsLoading(true); // Set loading state when starting to load
     }
-
-    // If no IntersectionObserver support, load immediately with a small delay
-    // This ensures images load even on older browsers
-    if (!window.IntersectionObserver) {
-      const timeoutId = setTimeout(() => {
-        setImageSrc(normalizedSrc);
-        setIsLoading(true);
-      }, 100);
-      return () => clearTimeout(timeoutId);
-    }
-
-    let observer = null;
-    let timeoutFallback = null;
-    let elementCheckInterval = null;
-    let isImageLoaded = false;
-
-    const loadImage = () => {
-      if (!isImageLoaded) {
-        isImageLoaded = true;
-        setImageSrc(normalizedSrc);
-        setIsLoading(true);
-        // Clear any pending timeouts/intervals
-        if (timeoutFallback) {
-          clearTimeout(timeoutFallback);
-          timeoutFallback = null;
-        }
-        if (elementCheckInterval) {
-          clearInterval(elementCheckInterval);
-          elementCheckInterval = null;
-        }
-      }
-    };
-
-    try {
-      // Create intersection observer for lazy loading
-      observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && !isImageLoaded) {
-              loadImage();
-              // Unobserve after loading starts
-              const elementToUnobserve = containerRef.current || imgRef.current;
-              if (observer && elementToUnobserve) {
-                try {
-                  observer.unobserve(elementToUnobserve);
-                } catch (e) {
-                  // Ignore unobserve errors
-                }
-              }
-            }
-          });
-        },
-        {
-          rootMargin: '100px', // Start loading 100px before image enters viewport
-          threshold: 0.01,
-        }
-      );
-
-      observerRef.current = observer;
-
-      // Try to observe the container element
-      const elementToObserve = containerRef.current || imgRef.current;
-      
-      if (elementToObserve) {
-        observer.observe(elementToObserve);
-      } else {
-        // If element is not available yet, set up a retry mechanism
-        elementCheckInterval = setInterval(() => {
-          const element = containerRef.current || imgRef.current;
-          if (element && observer && !isImageLoaded) {
-            try {
-              observer.observe(element);
-              clearInterval(elementCheckInterval);
-              elementCheckInterval = null;
-            } catch (e) {
-              // If observe fails, load immediately
-              loadImage();
-            }
-          }
-        }, 100);
-        
-        // Fallback: if element doesn't appear within 1 second, load immediately
-        setTimeout(() => {
-          if (elementCheckInterval) {
-            clearInterval(elementCheckInterval);
-            elementCheckInterval = null;
-          }
-          if (!isImageLoaded) {
-            loadImage();
-          }
-        }, 1000);
-      }
-
-      // Safety fallback: if IntersectionObserver doesn't trigger within 3 seconds,
-      // load the image anyway (handles cases where observer silently fails on some devices)
-      timeoutFallback = setTimeout(() => {
-        if (!isImageLoaded) {
-          // eslint-disable-next-line no-undef
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('[LazyImage] IntersectionObserver fallback triggered for:', normalizedSrc);
-          }
-          loadImage();
-        }
-      }, 3000);
-
-    } catch (error) {
-      // If IntersectionObserver creation fails, fall back to immediate loading
-      console.error('[LazyImage] IntersectionObserver error, loading immediately:', error);
-      loadImage();
-    }
-
-    // Cleanup
-    return () => {
-      if (timeoutFallback) {
-        clearTimeout(timeoutFallback);
-      }
-      if (elementCheckInterval) {
-        clearInterval(elementCheckInterval);
-      }
-      if (observer) {
-        try {
-          const elementToUnobserve = containerRef.current || imgRef.current;
-          if (elementToUnobserve) {
-            observer.unobserve(elementToUnobserve);
-          }
-          observer.disconnect();
-        } catch (e) {
-          // Ignore errors during cleanup
-        }
-      }
-    };
-  }, [normalizedSrc, loading]);
+  }, [loading, normalizedSrc]);
 
   // Fallback: If imageSrc is set but isLoading is still false after a delay, 
   // check if image is actually loaded
@@ -265,16 +204,16 @@ const LazyImage = ({
             src={imageSrc}
             alt={alt}
             loading={loading}
-            decoding="async"
             onLoad={handleLoad}
             onError={handleError}
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
             className={`transition-opacity duration-300 ${
               isLoading ? 'opacity-0' : 'opacity-100'
             } ${hasError ? 'opacity-50' : ''}`}
             style={{
               width: '100%',
               height: 'auto',
-              display: 'block',
             }}
           />
         </picture>
@@ -308,16 +247,16 @@ const LazyImage = ({
         src={imageSrc}
         alt={alt}
         loading={loading}
-        decoding="async"
         onLoad={handleLoad}
         onError={handleError}
+        referrerPolicy="no-referrer"
+        crossOrigin="anonymous"
         className={`transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         } ${hasError ? 'opacity-50' : ''}`}
         style={{
           width: '100%',
           height: 'auto',
-          display: 'block',
         }}
       />
       {/* Placeholder overlay with blur effect */}
