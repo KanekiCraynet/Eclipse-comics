@@ -9,7 +9,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSwipeGestures } from "@/hooks/useSwipeGestures";
 import { useReadingProgress } from "@/hooks/useReadingProgress";
 import ReadingModeSelector from "@/components/ReadingModeSelector";
-import { FaArrowLeft, FaSearchPlus, FaSearchMinus, FaExpand, FaCompress, FaPlay, FaPause } from "react-icons/fa6";
+import { FaArrowLeft, FaMagnifyingGlassPlus, FaMagnifyingGlassMinus, FaExpand, FaCompress, FaPlay, FaPause } from "react-icons/fa6";
 import { ChapterDetailSkeleton } from "@/components/ui/LoadingSkeleton";
 import LazyImage from "@/components/ui/LazyImage";
 
@@ -310,14 +310,14 @@ const ChapterDetail = () => {
                         className="p-2 hover:bg-[#171717] rounded"
                         aria-label="Zoom in"
                     >
-                        <FaSearchPlus className="text-sm" />
+                        <FaMagnifyingGlassPlus className="text-sm" />
                     </button>
                     <button
                         onClick={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))}
                         className="p-2 hover:bg-[#171717] rounded"
                         aria-label="Zoom out"
                     >
-                        <FaSearchMinus className="text-sm" />
+                        <FaMagnifyingGlassMinus className="text-sm" />
                     </button>
                     <button
                         onClick={() => setZoomLevel(1)}
