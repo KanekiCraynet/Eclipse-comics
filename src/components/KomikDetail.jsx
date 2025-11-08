@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
 import { komikcastAPI } from "@/services/api";
