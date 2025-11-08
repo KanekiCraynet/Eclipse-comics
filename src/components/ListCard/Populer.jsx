@@ -77,7 +77,10 @@ const Populer = () => {
                         };
                     } catch (error) {
                         // If detail fetch fails, return original data with defaults
-                        console.warn(`Failed to fetch detail for ${komik.title}:`, error);
+                        // Only log in development mode to avoid console spam
+                        if (process.env.NODE_ENV === 'development') {
+                            console.debug(`[Populer] Could not fetch detail for ${komik.title}, using fallback data`);
+                        }
                         const href = komik.href || komik.link || komik.url || '';
                         const endpoint = safeEndpoint(href);
                         return {

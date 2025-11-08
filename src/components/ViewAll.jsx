@@ -72,9 +72,13 @@ const ViewAll = ({ url }) => {
                     const endpoint = safeEndpoint(komik.url || komik.link || komik.endpoint);
                     const chapters = Array.isArray(komik.chapter) ? komik.chapter : [];
                     const chapterCount = chapters.length;
-                    const latestChapter = safeStringTrim(komik.latestChapter || (chapters.length > 0 ? chapters[0]?.title : 'N/A'), 'N/A');
+                    // Use extractChapter helper to properly handle string/object/array formats
+                    const latestChapter = extractChapter(
+                        komik.latestChapter || komik.chapter,
+                        'N/A'
+                    );
                     const title = safeStringTrim(komik.title, 'Untitled');
-                    const displayChapter = chapterCount > 0 ? `${chapterCount} Ch.` : `Ch. ${String(latestChapter).replace("Chapter","").trim()}`;
+                    const displayChapter = chapterCount > 0 ? `${chapterCount} Ch.` : `Ch. ${latestChapter}`;
 
                     return (
                         <NavLink

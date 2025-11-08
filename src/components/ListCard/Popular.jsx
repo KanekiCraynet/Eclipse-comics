@@ -40,7 +40,11 @@ const Popular = () => {
             });
             return extractApiData(detailResponse);
         } catch (error) {
-            console.warn(`Failed to fetch detail for ${komik.title}:`, error);
+            // Silently fail and return null - we have fallback data from popularData
+            // Only log in development mode to avoid console spam
+            if (process.env.NODE_ENV === 'development') {
+                console.debug(`[Popular] Could not fetch detail for ${komik.title}, using fallback data`);
+            }
             return null;
         }
     }, []);
