@@ -47,3 +47,9 @@ export const VALIDATION = {
   MAX_PAGE: 1000,
 };
 
+export const RATE_LIMIT = {
+  ENABLED: true,
+  DEFAULT_MAX_REQUESTS: 10,
+  DEFAULT_WINDOW_MS: 60000, // 1 minute
+};
+

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { komikcastAPI } from '../services/api';
 import cacheManager from '../services/cacheManager';
-import { extractApiData } from '../utils/apiHelpers';
+import { extractApiData, normalizeError, extractErrorMessage } from '../utils/apiHelpers';
 
 /**
  * Unified API hook consolidating both useFetch implementations
@@ -80,7 +80,25 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
       });
 
       // Extract data from response consistently
-      const extractedData = extractApiData(response);
+      let extractedData;
+      try {
+        extractedData = extractApiData(response);
+      } catch (extractError) {
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API] extractApiData error:', {
+            error: extractError.message,
+            response: response,
+          });
+        }
+        // If extractApiData fails, try to use response.data directly
+        extractedData = response?.data || response;
+      }
+
+      // Validate extracted data
+      if (extractedData === null || extractedData === undefined) {
+        throw new Error('API mengembalikan data kosong');
+      }
 
       // Only update state if component is still mounted
       if (mountedRef.current && !signal.aborted) {
@@ -98,8 +116,18 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
         return;
       }
 
-      // Extract error message from transformed error (API wrapper already provides user-friendly messages)
-      const errorMessage = err.message || err.response?.data?.message || 'Gagal memuat data. Silakan coba lagi.';
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[API] useKomikcastAPI error:', {
+          error: err,
+          message: err.message,
+          stack: err.stack,
+        });
+      }
+
+      // Normalize error to standardized format and extract user-friendly message
+      const normalizedError = normalizeError(err);
+      const errorMessage = extractErrorMessage(normalizedError);
       setError(errorMessage);
       setData(null);
     } finally {
@@ -150,6 +178,7 @@ export const useKomikcastAPI = (apiFunction, options = {}) => {
 
 /**
  * Hook for fetching route-based API calls (backward compatibility)
+ * Supports pagination for terbaru and genre endpoints
  */
 export const useKomikcastRoute = (route, options = {}) => {
   const {
@@ -157,6 +186,7 @@ export const useKomikcastRoute = (route, options = {}) => {
     cacheTTL = 30 * 60 * 1000,
     enableCache = true,
     skip = false,
+    page = 1, // Add page parameter support
   } = options;
 
   // Map route to API function
@@ -165,6 +195,13 @@ export const useKomikcastRoute = (route, options = {}) => {
       return komikcastAPI.getRecommended;
     } else if (route.startsWith('popular')) {
       return komikcastAPI.getPopular;
+    } else if (route.startsWith('terbaru')) {
+      // Extract page from route or use options.page
+      const pageMatch = route.match(/\?page=(\d+)/);
+      const routePage = pageMatch ? parseInt(pageMatch[1], 10) : page;
+      // Validate and default to 1 if invalid
+      const validPage = (routePage && routePage > 0 && routePage <= 1000) ? routePage : 1;
+      return () => komikcastAPI.getTerbaru(validPage);
     } else if (route.startsWith('detail/')) {
       const endpoint = route.replace('detail/', '');
       return () => komikcastAPI.getDetail(endpoint);
@@ -184,20 +221,29 @@ export const useKomikcastRoute = (route, options = {}) => {
       const match = route.match(/genre\/([^?]+)(?:\?page=(\d+))?/);
       if (match) {
         const genre = match[1];
-        const page = match[2] ? parseInt(match[2], 10) : 1;
-        return () => komikcastAPI.getGenreComics(genre, page);
+        const routePage = match[2] ? parseInt(match[2], 10) : page;
+        // Validate and default to 1 if invalid
+        const validPage = (routePage && routePage > 0 && routePage <= 1000) ? routePage : 1;
+        return () => komikcastAPI.getGenreComics(genre, validPage);
       }
       return null;
     }
     return null;
-  }, [route]);
+  }, [route, page]);
 
   const apiFunction = getApiFunction();
+  
+  // Generate cache key with page if applicable
+  const finalCacheKey = cacheKey || (enableCache 
+    ? (route.startsWith('terbaru') || route.startsWith('genre/') 
+      ? `route_${route}_page_${page}` 
+      : `route_${route}`)
+    : null);
 
   return useKomikcastAPI(
     apiFunction || (() => Promise.reject(new Error(`Invalid route: ${route}`))),
     {
-      cacheKey: cacheKey || (enableCache ? `route_${route}` : null),
+      cacheKey: finalCacheKey,
       cacheTTL,
       enableCache,
       skip: skip || !apiFunction,

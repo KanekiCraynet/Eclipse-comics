@@ -2,21 +2,23 @@ import { useState } from "react";
 import { useReadingPreferences, READING_MODES, READING_DIRECTIONS } from "@/hooks/useReadingPreferences";
 import { FaMoon, FaSun, FaBook, FaImage, FaBars, FaArrowLeft, FaArrowRight, FaTrash } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/context/ToastContext";
 import cacheManager from "@/services/cacheManager";
 
 const Setting = () => {
     const navigate = useNavigate();
     const { preferences, updatePreference, resetPreferences } = useReadingPreferences();
+    const { success, error: showError } = useToast();
     const [showClearCacheConfirm, setShowClearCacheConfirm] = useState(false);
 
     const handleClearCache = () => {
         try {
             cacheManager.clear();
             setShowClearCacheConfirm(false);
-            alert("Cache berhasil dibersihkan");
-        } catch (error) {
-            console.error("Error clearing cache:", error);
-            alert("Gagal membersihkan cache");
+            success("Cache berhasil dibersihkan");
+        } catch (err) {
+            console.error("Error clearing cache:", err);
+            showError("Gagal membersihkan cache");
         }
     };
 

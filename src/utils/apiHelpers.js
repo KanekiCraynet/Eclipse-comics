@@ -4,35 +4,115 @@ import { safeParseJSON } from './storageHelpers';
 /**
  * Extract data from API response consistently
  * Handles both axios response format and direct data format
- * API wrapper returns: { data: { status: 'success', data: [...] } }
- * After API wrapper validateResponse: { data: [...] } (already extracted)
- * This function extracts the actual data from the response
+ * API wrapper validateResponse already extracts data from { status: 'success', data: {...} }
+ * This function handles the final extraction from axios response format
  */
 export const extractApiData = (response) => {
   if (!response) {
     return null;
   }
 
+  // eslint-disable-next-line no-undef
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[API] extractApiData - Input:', {
+      hasResponse: !!response,
+      hasData: !!response.data,
+      dataType: typeof response.data,
+      isAxiosResponse: !!(response.status && response.headers),
+      dataKeys: response.data ? Object.keys(response.data) : [],
+    });
+  }
+
   // If response is already the data (not wrapped in axios response)
   // Check if it's a plain object without axios response structure
   if (typeof response === 'object' && !response.data && !response.status && !response.headers) {
+    // eslint-disable-next-line no-undef
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API] extractApiData - Direct data format, returning as-is');
+    }
     return response;
   }
 
   // Handle axios response format: response.data
-  const responseData = response.data || response;
-
-  // If responseData has status field, it's from raw API (before wrapper normalization)
-  if (responseData && typeof responseData === 'object' && responseData.status !== undefined) {
-    if (responseData.status === 'success') {
-      // API format: { status: 'success', data: [...] }
-      return responseData.data !== undefined ? responseData.data : responseData;
-    } else {
-      throw new Error(responseData.message || 'API request failed');
+  // After validateResponse, response.data should already be the extracted data
+  // Check if this is an axios response (has status and headers)
+  const isAxiosResponse = !!(response.status && response.headers);
+  
+  if (isAxiosResponse) {
+    // This is an axios response, validateResponse has already processed it
+    // response.data should already be the extracted data (without API status wrapper)
+    // We should NOT check for status field here because data might have its own status field
+    // (e.g., comic status: "Ongoing", "Completed", etc.)
+    const responseData = response.data;
+    
+    // eslint-disable-next-line no-undef
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API] extractApiData - Axios response format, using response.data directly');
     }
+    
+    return responseData;
   }
 
-  // Direct data format (already extracted by API wrapper or direct response)
+  // Not an axios response, might be direct data or unprocessed response
+  const responseData = response.data !== undefined ? response.data : response;
+
+  // Only check for API status wrapper if this is NOT an axios response
+  // and the responseData looks like an API response wrapper
+  if (responseData && typeof responseData === 'object' && responseData.status !== undefined) {
+    // Check if this looks like an API response wrapper (has status and possibly data field)
+    // API response wrapper: { status: 'success', data: {...} } or { status: 'error', message: '...' }
+    const looksLikeApiWrapper = responseData.status === 'success' || responseData.status === 'error' || responseData.status === 'failed';
+    
+    if (looksLikeApiWrapper) {
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('[API] extractApiData - API wrapper detected, extracting...');
+      }
+      
+      if (responseData.status === 'success') {
+        // API format: { status: 'success', data: [...] }
+        if (responseData.data !== undefined) {
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[API] extractApiData - Extracted data.data');
+          }
+          return responseData.data;
+        } else {
+          // Remove status field if data.data doesn't exist
+          const { status, ...dataWithoutStatus } = responseData;
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[API] extractApiData - Removed status field');
+          }
+          return dataWithoutStatus;
+        }
+      } else {
+        // Status is not 'success', this is an error
+        const errorMessage = responseData.message || responseData.error || 'API request failed';
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API] extractApiData - Error status:', {
+            status: responseData.status,
+            message: errorMessage,
+          });
+        }
+        throw new Error(errorMessage);
+      }
+    }
+    // If status field exists but doesn't look like API wrapper (e.g., status: "Ongoing" in comic data),
+    // just return the data as-is
+  }
+
+  // Direct data format (already extracted by API wrapper validateResponse)
+  // eslint-disable-next-line no-undef
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[API] extractApiData - Output:', {
+      hasData: !!responseData,
+      dataType: typeof responseData,
+      isArray: Array.isArray(responseData),
+      dataKeys: responseData && typeof responseData === 'object' ? Object.keys(responseData) : [],
+    });
+  }
   return responseData;
 };
 
@@ -214,6 +294,83 @@ export const safeImageUrl = (url, fallback = 'data:image/jpeg;base64,/9j/4AAQSkZ
     console.error('[API Helpers] Error processing image URL:', error);
     return fallback;
   }
+};
+
+/**
+ * Generate WebP version of image URL
+ * Attempts to convert image URL to WebP format if possible
+ * @param {string} url - Original image URL
+ * @returns {string|null} - WebP URL or null if conversion not possible
+ */
+export const generateWebPUrl = (url) => {
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+
+  try {
+    const normalizedUrl = safeImageUrl(url);
+    if (normalizedUrl === url || !normalizedUrl) {
+      return null;
+    }
+
+    // Check if URL already ends with .webp
+    if (normalizedUrl.toLowerCase().endsWith('.webp')) {
+      return normalizedUrl;
+    }
+
+    // Try to replace extension with .webp
+    const urlWithoutExt = normalizedUrl.replace(/\.(jpg|jpeg|png|gif)$/i, '');
+    if (urlWithoutExt !== normalizedUrl) {
+      return `${urlWithoutExt}.webp`;
+    }
+
+    // If no extension found, try appending .webp (some CDNs support this)
+    // Note: This is a fallback and may not work for all image sources
+    return null;
+  } catch (error) {
+    console.error('[API Helpers] Error generating WebP URL:', error);
+    return null;
+  }
+};
+
+/**
+ * Generate blur placeholder data URL
+ * Creates a tiny blurred version of the image for placeholder
+ * @param {string} url - Image URL
+ * @param {number} width - Placeholder width (default: 20)
+ * @param {number} height - Placeholder height (default: 20)
+ * @returns {string} - Data URL for blur placeholder
+ */
+export const generateBlurPlaceholder = (url, width = 20, height = 20) => {
+  // For now, return a simple gradient placeholder
+  // In production, you might want to use a service like blurhash or generate actual blur
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  
+  // Create gradient placeholder
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, '#1a1a1a');
+  gradient.addColorStop(1, '#2a2a2a');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  
+  return canvas.toDataURL('image/jpeg', 0.1);
+};
+
+/**
+ * Check if browser supports WebP format
+ * @returns {Promise<boolean>} - True if WebP is supported
+ */
+export const checkWebPSupport = () => {
+  return new Promise((resolve) => {
+    const webP = new Image();
+    webP.onload = webP.onerror = () => {
+      resolve(webP.height === 2);
+    };
+    webP.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA';
+  });
 };
 
 /**
@@ -436,4 +593,149 @@ export const sanitizeInput = (input) => {
   }
   // Remove potentially dangerous characters but keep basic punctuation
   return input.trim().replace(/[<>]/g, '');
+};
+
+/**
+ * Error Types
+ */
+export const ERROR_TYPES = {
+  NETWORK: 'network',
+  VALIDATION: 'validation',
+  NOT_FOUND: 'not_found',
+  SERVER_ERROR: 'server_error',
+  RATE_LIMIT: 'rate_limit',
+  TIMEOUT: 'timeout',
+  UNKNOWN: 'unknown',
+};
+
+/**
+ * Create standardized error response
+ * @param {string} message - Error message
+ * @param {string} type - Error type (from ERROR_TYPES)
+ * @param {any} data - Additional error data
+ * @param {number} status - HTTP status code (if applicable)
+ * @returns {object} - Standardized error object
+ */
+export const createErrorResponse = (message, type = ERROR_TYPES.UNKNOWN, data = null, status = null) => {
+  return {
+    status: 'error',
+    message: message || 'Terjadi kesalahan yang tidak diketahui',
+    type,
+    data: data || [],
+    statusCode: status,
+    timestamp: new Date().toISOString(),
+  };
+};
+
+/**
+ * Classify error type from error object
+ * @param {object} error - Error object from API wrapper
+ * @returns {string} - Error type
+ */
+export const classifyErrorType = (error) => {
+  if (!error) return ERROR_TYPES.UNKNOWN;
+
+  // Check for network errors
+  if (error.isNetworkError) {
+    if (error.message?.includes('timeout') || error.message?.includes('habis')) {
+      return ERROR_TYPES.TIMEOUT;
+    }
+    return ERROR_TYPES.NETWORK;
+  }
+
+  // Check for HTTP status codes
+  if (error.status) {
+    if (error.status === 404) {
+      return ERROR_TYPES.NOT_FOUND;
+    }
+    if (error.status === 429) {
+      return ERROR_TYPES.RATE_LIMIT;
+    }
+    if (error.status >= 500) {
+      return ERROR_TYPES.SERVER_ERROR;
+    }
+    if (error.status === 400) {
+      return ERROR_TYPES.VALIDATION;
+    }
+  }
+
+  // Check for validation errors
+  if (error.message?.includes('must be') || error.message?.includes('required')) {
+    return ERROR_TYPES.VALIDATION;
+  }
+
+  // Check for specific error messages
+  const message = error.message?.toLowerCase() || '';
+  if (message.includes('page is required') || message.includes('keyword') || message.includes('endpoint')) {
+    return ERROR_TYPES.VALIDATION;
+  }
+  if (message.includes('not found') || message.includes('tidak ditemukan')) {
+    return ERROR_TYPES.NOT_FOUND;
+  }
+  if (message.includes('comic not found')) {
+    return ERROR_TYPES.NOT_FOUND;
+  }
+
+  return ERROR_TYPES.UNKNOWN;
+};
+
+/**
+ * Extract user-friendly error message from error object
+ * @param {object} error - Error object
+ * @returns {string} - User-friendly error message
+ */
+export const extractErrorMessage = (error) => {
+  if (!error) return 'Terjadi kesalahan yang tidak diketahui';
+
+  // Use message from error object if available
+  if (error.message) {
+    return error.message;
+  }
+
+  // Fallback to status-based messages
+  if (error.status) {
+    switch (error.status) {
+      case 400:
+        return 'Permintaan tidak valid. Silakan periksa parameter yang dikirim.';
+      case 404:
+        return 'Data tidak ditemukan.';
+      case 429:
+        return 'Terlalu banyak permintaan. Silakan tunggu sebentar.';
+      case 500:
+        return 'Kesalahan server. Silakan coba lagi nanti.';
+      case 503:
+        return 'Layanan sedang tidak tersedia. Silakan coba lagi nanti.';
+      default:
+        return `Kesalahan server (${error.status}). Silakan coba lagi.`;
+    }
+  }
+
+  return 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+};
+
+/**
+ * Normalize error to standardized format
+ * @param {any} error - Error object (can be various formats)
+ * @returns {object} - Standardized error response
+ */
+export const normalizeError = (error) => {
+  if (!error) {
+    return createErrorResponse(
+      'Terjadi kesalahan yang tidak diketahui',
+      ERROR_TYPES.UNKNOWN
+    );
+  }
+
+  // If already in standardized format, return as is
+  if (error.status === 'error' && error.type && error.message) {
+    return error;
+  }
+
+  // Extract error information
+  const type = classifyErrorType(error);
+  const message = extractErrorMessage(error);
+  const statusCode = error.status || error.statusCode || null;
+  const data = error.data || null;
+
+  return createErrorResponse(message, type, data, statusCode);
 };

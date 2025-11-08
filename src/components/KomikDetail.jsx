@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
 import { komikcastAPI } from "@/services/api";
 import { getJSONItem, setJSONItem } from "@/utils/storageHelpers";
-import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
+import { safeStringTrim, safeImageUrl, safeEndpoint, normalizeError, ERROR_TYPES } from "@/utils/apiHelpers";
+import { useToast } from "@/context/ToastContext";
 import { FaPaperPlane, FaUser, FaBookmark, FaTrash, FaArrowLeft, FaStar, FaCalendarDays, FaReadme } from "react-icons/fa6";
 import { IoMdEye } from "react-icons/io";
 import { KomikDetailSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -13,6 +14,7 @@ const KomikDetail = () => {
   const [isBookmark, setIsBookmark] = useState(false);
   const navigate = useNavigate();
   const { komik } = useParams();
+  const { error: showErrorToast } = useToast();
   
   // Validate komik endpoint - redirect to home if empty or invalid
   useEffect(() => {
@@ -32,6 +34,18 @@ const KomikDetail = () => {
       skip: !komik || komik.trim() === '', // Skip API call if endpoint is invalid
     }
   );
+
+  // Show toast notification for errors
+  useEffect(() => {
+    if (error) {
+      const normalizedError = normalizeError({ message: error });
+      if (normalizedError.type === ERROR_TYPES.NOT_FOUND) {
+        showErrorToast('Komik tidak ditemukan. Silakan periksa URL atau coba komik lain.');
+      } else {
+        showErrorToast(error);
+      }
+    }
+  }, [error, showErrorToast]);
 
   // Debug logging (only in development)
   useEffect(() => {
@@ -154,10 +168,19 @@ const KomikDetail = () => {
       }
       if (commentBoxRef.current) {
         try {
-          commentBoxRef.current.destroy();
+          // Check if destroy is a function before calling it
+          if (typeof commentBoxRef.current.destroy === 'function') {
+            commentBoxRef.current.destroy();
+          } else if (typeof commentBoxRef.current === 'function') {
+            // If commentBoxRef.current itself is a function (cleanup function), call it
+            commentBoxRef.current();
+          }
           commentBoxRef.current = null;
         } catch (error) {
-          console.error("Error destroying CommentBox:", error);
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.error("Error destroying CommentBox:", error);
+          }
         }
       }
     };
@@ -168,23 +191,41 @@ const KomikDetail = () => {
   }
 
   if (error) {
+    const normalizedError = normalizeError({ message: error });
+    const isNotFound = normalizedError.type === ERROR_TYPES.NOT_FOUND;
+    
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <p className="text-red-500 mb-2 text-lg font-semibold">Gagal memuat detail komik</p>
-          <p className="text-gray-400 text-sm mb-6">{error}</p>
+          <p className="text-red-500 mb-2 text-lg font-semibold">
+            {isNotFound ? 'Komik tidak ditemukan' : 'Gagal memuat detail komik'}
+          </p>
+          <p className="text-gray-400 text-sm mb-6">
+            {isNotFound 
+              ? 'Komik yang Anda cari tidak tersedia. Mungkin telah dihapus atau URL tidak valid.'
+              : error
+            }
+          </p>
           <div className="flex gap-3 justify-center">
-            <button
-              onClick={refetch}
-              className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Coba Lagi
-            </button>
+            {!isNotFound && (
+              <button
+                onClick={refetch}
+                className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Coba Lagi
+              </button>
+            )}
             <button
               onClick={() => navigate(-1)}
               className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
             >
               Kembali
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Beranda
             </button>
           </div>
         </div>

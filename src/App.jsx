@@ -4,6 +4,7 @@ import "@/index.css"
 import BottomNavbar from "@/components/BottomNavbar"
 import Loading from "@/components/Loading"
 import ErrorBoundary from "@/components/ErrorBoundary"
+import { ToastContainer } from "@/components/ui/Toast"
 
 const KomikList = lazy(() => import("@/components/KomikList"))
 const SearchKomik = lazy(() => import("@/components/SearchKomik"))
@@ -51,6 +52,7 @@ const App = () => {
                 </Routes>
             </Suspense>
             {shouldShowBottomNavBar() && <BottomNavbar route={location} />}
+            <ToastContainer />
         </div>
     )
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { komikcastAPI } from '../services/api';
 import cacheManager from '../services/cacheManager';
-import { extractApiData, validateSearchResponse } from '../utils/apiHelpers';
+import { extractApiData, validateSearchResponse, normalizeError, extractErrorMessage } from '../utils/apiHelpers';
 
 /**
  * Debounced search hook with cancellation and caching
@@ -112,8 +112,9 @@ export const useDebounceSearch = (keyword, options = {}) => {
         return;
       }
 
-      // Extract error message from transformed error (API wrapper already provides user-friendly messages)
-      const errorMessage = err.message || 'Gagal melakukan pencarian. Silakan coba lagi.';
+      // Normalize error to standardized format and extract user-friendly message
+      const normalizedError = normalizeError(err);
+      const errorMessage = extractErrorMessage(normalizedError);
       setError(errorMessage);
       setData(null);
     } finally {

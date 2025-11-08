@@ -37,11 +37,32 @@ export const useReadingPreferences = () => {
   useEffect(() => {
     try {
       const saved = getJSONItem('readingPreferences', DEFAULT_PREFERENCES);
-      setPreferencesState({ ...DEFAULT_PREFERENCES, ...saved });
+      const loadedPreferences = { ...DEFAULT_PREFERENCES, ...saved };
+      setPreferencesState(loadedPreferences);
+      
+      // Apply theme to document
+      if (loadedPreferences.darkMode) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      } else {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      }
     } catch (error) {
       console.error('Error loading reading preferences:', error);
     }
   }, []);
+
+  // Apply theme when darkMode changes
+  useEffect(() => {
+    if (preferences.darkMode) {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  }, [preferences.darkMode]);
 
   // Save preferences to localStorage
   const savePreferences = useCallback((newPreferences) => {

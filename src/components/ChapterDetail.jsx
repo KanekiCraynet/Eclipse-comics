@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useKomikcastAPI } from "@/hooks/useKomikcastAPI";
 import { komikcastAPI } from "@/services/api";
 import { getJSONItem, setJSONItem } from "@/utils/storageHelpers";
-import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers";
+import { safeStringTrim, safeImageUrl, safeEndpoint, normalizeError, ERROR_TYPES } from "@/utils/apiHelpers";
+import { useToast } from "@/context/ToastContext";
 import { useReadingPreferences, READING_MODES } from "@/hooks/useReadingPreferences";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSwipeGestures } from "@/hooks/useSwipeGestures";
@@ -24,6 +25,7 @@ const ChapterDetail = () => {
     const chapterContainerRef = useRef(null);
     const autoScrollIntervalRef = useRef(null);
     const { preferences, updatePreference } = useReadingPreferences();
+    const { error: showErrorToast } = useToast();
     
     // Extract komik endpoint from chapter
     const komikEndpoint = chapter.split("-chapter")[0];
@@ -59,6 +61,35 @@ const ChapterDetail = () => {
 
     const loading = chapterLoading || komikLoading;
     const error = chapterError || komikError;
+
+    // Show toast notification for errors
+    useEffect(() => {
+      if (error) {
+        const normalizedError = normalizeError({ message: error });
+        if (normalizedError.type === ERROR_TYPES.NOT_FOUND) {
+          showErrorToast('Chapter tidak ditemukan. Silakan periksa URL atau coba chapter lain.');
+        } else {
+          showErrorToast(error);
+        }
+      }
+    }, [error, showErrorToast]);
+
+    // Debug logging (only in development)
+    useEffect(() => {
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development' && chapterData) {
+        console.log('[ChapterDetail] chapterData:', {
+          isArray: Array.isArray(chapterData),
+          length: Array.isArray(chapterData) ? chapterData.length : 'N/A',
+          firstItem: Array.isArray(chapterData) && chapterData.length > 0 ? chapterData[0] : null,
+          chapterResponse: chapterResponse,
+          hasPanel: !!chapterResponse?.panel,
+          panelLength: Array.isArray(chapterResponse?.panel) ? chapterResponse.panel.length : 0,
+          hasImages: !!chapterResponse?.images,
+          imagesLength: Array.isArray(chapterResponse?.images) ? chapterResponse.images.length : 0,
+        });
+      }
+    }, [chapterData, chapterResponse]);
 
     // Resume reading from last position on mount
     useEffect(() => {
@@ -111,17 +142,45 @@ const ChapterDetail = () => {
     }
 
     if (error) {
+        const normalizedError = normalizeError({ message: error });
+        const isNotFound = normalizedError.type === ERROR_TYPES.NOT_FOUND;
+        
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-red-500 mb-2">Gagal memuat chapter</p>
-                    <p className="text-gray-500 text-sm mb-4">{error}</p>
-                    <button
-                        onClick={refetchChapter}
-                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
-                    >
-                        Coba Lagi
-                    </button>
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="text-center max-w-md">
+                    <p className="text-red-500 mb-2 text-lg font-semibold">
+                        {isNotFound ? 'Chapter tidak ditemukan' : 'Gagal memuat chapter'}
+                    </p>
+                    <p className="text-gray-400 text-sm mb-6">
+                        {isNotFound 
+                            ? 'Chapter yang Anda cari tidak tersedia. Mungkin telah dihapus atau URL tidak valid.'
+                            : error
+                        }
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                        {!isNotFound && (
+                            <button
+                                onClick={refetchChapter}
+                                className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                Coba Lagi
+                            </button>
+                        )}
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
+                        >
+                            Kembali
+                        </button>
+                        {komikEndpoint && (
+                            <button
+                                onClick={() => navigate(`/komik/${komikEndpoint}`)}
+                                className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                Detail Komik
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -129,15 +188,28 @@ const ChapterDetail = () => {
 
     if (!chapterResponse) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-gray-500 mb-4">Chapter tidak ditemukan</p>
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
-                    >
-                        Kembali
-                    </button>
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="text-center max-w-md">
+                    <p className="text-gray-400 mb-4 text-lg font-semibold">Chapter tidak ditemukan</p>
+                    <p className="text-gray-500 text-sm mb-6">
+                        Chapter yang Anda cari tidak tersedia. Silakan coba chapter lain.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
+                        >
+                            Kembali
+                        </button>
+                        {komikEndpoint && (
+                            <button
+                                onClick={() => navigate(`/komik/${komikEndpoint}`)}
+                                className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                Detail Komik
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -145,15 +217,26 @@ const ChapterDetail = () => {
 
     if (!komikResponse) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <p className="text-gray-500 mb-4">Detail komik tidak ditemukan</p>
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
-                    >
-                        Kembali
-                    </button>
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="text-center max-w-md">
+                    <p className="text-gray-400 mb-4 text-lg font-semibold">Detail komik tidak ditemukan</p>
+                    <p className="text-gray-500 text-sm mb-6">
+                        Tidak dapat memuat detail komik. Silakan coba lagi nanti.
+                    </p>
+                    <div className="flex gap-3 justify-center">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
+                        >
+                            Kembali
+                        </button>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                        >
+                            Beranda
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -178,11 +261,44 @@ const ChapterDetail = () => {
     };
 
     // Extract panel images from chapter response (API returns { title: "...", panel: [...] })
-    const images = Array.isArray(chapterResponse?.panel) 
-      ? chapterResponse.panel 
-      : Array.isArray(chapterResponse?.images) 
-        ? chapterResponse.images 
-        : [];
+    // Handle both array format [{"title":"...","panel":[...]}] and object format {"title":"...","panel":[...]}
+    let images = [];
+    if (chapterResponse) {
+      if (Array.isArray(chapterResponse.panel)) {
+        images = chapterResponse.panel;
+      } else if (Array.isArray(chapterResponse.images)) {
+        images = chapterResponse.images;
+      } else if (Array.isArray(chapterData) && chapterData.length > 0) {
+        // Fallback: if chapterData is array, try to extract from first item
+        const firstItem = chapterData[0];
+        if (Array.isArray(firstItem?.panel)) {
+          images = firstItem.panel;
+        } else if (Array.isArray(firstItem?.images)) {
+          images = firstItem.images;
+        }
+      }
+    }
+    
+    // Debug logging for images
+    useEffect(() => {
+      // eslint-disable-next-line no-undef
+      if (process.env.NODE_ENV === 'development') {
+        if (images.length > 0) {
+          console.log('[ChapterDetail] Images extracted:', {
+            count: images.length,
+            firstImage: images[0],
+            lastImage: images[images.length - 1],
+          });
+        } else {
+          console.warn('[ChapterDetail] No images found:', {
+            chapterResponse: chapterResponse,
+            chapterData: chapterData,
+            hasPanel: !!chapterResponse?.panel,
+            hasImages: !!chapterResponse?.images,
+          });
+        }
+      }
+    }, [images, chapterResponse, chapterData]);
     const chapterTitle = safeStringTrim(chapterResponse?.title, "Chapter");
     const chapterNumber = chapterTitle.split("Chapter ")[1] || "";
     const komikTitle = safeStringTrim(komikResponse?.title?.replace("Bahasa Indonesia", ""), "Unknown");

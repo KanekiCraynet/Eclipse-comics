@@ -1,4 +1,7 @@
 import axios from 'axios';
+import { normalizeError, extractErrorMessage, classifyErrorType } from '../utils/apiHelpers';
+import rateLimiter from '../utils/rateLimiter';
+import { RATE_LIMIT } from '../constants/api';
 
 /**
  * API Wrapper with retry logic, request deduplication, and error handling
@@ -52,27 +55,77 @@ class APIWrapper {
     
     // Response interceptor
     this.axiosInstance.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Log successful responses in development for debugging
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[API] Response received:', {
+            url: response.config?.url,
+            status: response.status,
+            hasData: !!response.data,
+            dataType: typeof response.data,
+            hasStatusField: response.data?.status !== undefined,
+          });
+        }
+        return response;
+      },
       (error) => {
         // Transform error for consistent handling
         const transformedError = this.transformError(error);
-        console.error('[API] Response error:', transformedError);
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API] Response error:', {
+            url: error.config?.url,
+            status: error.response?.status,
+            message: transformedError.message,
+            data: error.response?.data,
+          });
+        }
         return Promise.reject(transformedError);
       }
     );
   }
   
   transformError(error) {
+    let transformedError = {
+      message: '',
+      status: null,
+      data: null,
+      isNetworkError: false,
+      originalError: error,
+    };
+
     if (error.response) {
       // Server responded with error status
       const status = error.response.status;
-      let message = error.response.data?.message;
+      let message = error.response.data?.message || error.response.data?.error;
       
-      // Provide user-friendly error messages based on status code
+      // Extract message from response data (handle various formats)
+      if (!message && error.response.data) {
+        if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        } else if (error.response.data.data?.message) {
+          message = error.response.data.data.message;
+        }
+      }
+
+      // Handle specific error messages from API
+      const errorMessageLower = (message || '').toLowerCase();
+      if (errorMessageLower.includes('page is required')) {
+        message = 'Parameter page diperlukan. Silakan berikan nomor halaman yang valid.';
+      } else if (errorMessageLower.includes('comic not found') || errorMessageLower.includes('komik tidak ditemukan')) {
+        message = 'Komik tidak ditemukan.';
+      } else if (errorMessageLower.includes('chapter not found') || errorMessageLower.includes('chapter tidak ditemukan')) {
+        message = 'Chapter tidak ditemukan.';
+      } else if (errorMessageLower.includes('keyword') && errorMessageLower.includes('required')) {
+        message = 'Keyword pencarian diperlukan.';
+      }
+      
+      // Provide user-friendly error messages based on status code if no message
       if (!message) {
         switch (status) {
           case 400:
-            message = 'Permintaan tidak valid. Silakan coba lagi.';
+            message = 'Permintaan tidak valid. Silakan periksa parameter yang dikirim.';
             break;
           case 401:
             message = 'Tidak memiliki izin untuk mengakses data ini.';
@@ -97,7 +150,7 @@ class APIWrapper {
         }
       }
       
-      return {
+      transformedError = {
         message,
         status,
         data: error.response.data,
@@ -106,7 +159,7 @@ class APIWrapper {
       };
     } else if (error.request) {
       // Request made but no response (network error)
-      return {
+      transformedError = {
         message: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
         status: null,
         data: null,
@@ -115,7 +168,7 @@ class APIWrapper {
       };
     } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       // Request timeout
-      return {
+      transformedError = {
         message: 'Waktu permintaan habis. Silakan coba lagi.',
         status: null,
         data: null,
@@ -123,8 +176,8 @@ class APIWrapper {
         originalError: error,
       };
     } else {
-      // Error setting up request
-      return {
+      // Error setting up request (validation errors, etc.)
+      transformedError = {
         message: error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
         status: null,
         data: null,
@@ -132,6 +185,9 @@ class APIWrapper {
         originalError: error,
       };
     }
+
+    // Normalize to standardized error format
+    return normalizeError(transformedError);
   }
   
   /**
@@ -162,12 +218,33 @@ class APIWrapper {
    * Check if error is retryable
    */
   isRetryableError(error) {
-    if (!error.isNetworkError && error.status) {
-      // Retry on 5xx errors and 429 (rate limit)
-      return error.status >= 500 || error.status === 429;
+    // Handle standardized error format
+    const errorType = error.type || classifyErrorType(error);
+    const statusCode = error.statusCode || error.status;
+    
+    // Don't retry on validation or not found errors
+    if (errorType === 'validation' || errorType === 'not_found') {
+      return false;
     }
-    // Retry on network errors
-    return error.isNetworkError;
+    
+    // Retry on network errors, timeouts, and server errors
+    if (errorType === 'network' || errorType === 'timeout' || errorType === 'server_error') {
+      return true;
+    }
+    
+    // Retry on rate limit (with backoff)
+    if (errorType === 'rate_limit') {
+      return true;
+    }
+    
+    // Fallback to status code check
+    if (statusCode) {
+      // Retry on 5xx errors and 429 (rate limit)
+      return statusCode >= 500 || statusCode === 429;
+    }
+    
+    // Retry on network errors (legacy check)
+    return error.isNetworkError === true;
   }
   
   /**
@@ -178,6 +255,7 @@ class APIWrapper {
       retries = this.defaultConfig.retries,
       retryDelay = this.defaultConfig.retryDelay,
       enableDeduplication = true,
+      enableRateLimit = RATE_LIMIT.ENABLED,
       signal,
     } = options;
     
@@ -187,6 +265,26 @@ class APIWrapper {
     if (enableDeduplication && requestKey && this.pendingRequests.has(requestKey)) {
       // Silently return pending request without logging to reduce console spam
       return this.pendingRequests.get(requestKey);
+    }
+    
+    // Check rate limit
+    if (enableRateLimit && config.url) {
+      const rateLimitCheck = rateLimiter.canMakeRequest(config.url);
+      if (!rateLimitCheck.allowed) {
+        const delay = rateLimiter.getDelay(config.url);
+        const error = normalizeError({
+          message: `Terlalu banyak permintaan. Silakan tunggu ${Math.ceil(delay / 1000)} detik.`,
+          status: 429,
+        });
+        error.type = 'rate_limit';
+        error.retryAfter = delay;
+        throw error;
+      }
+    }
+    
+    // Record request for rate limiting
+    if (enableRateLimit && config.url) {
+      rateLimiter.recordRequest(config.url);
     }
     
     // Create request promise
@@ -225,7 +323,25 @@ class APIWrapper {
         });
         
         // Validate response structure
-        return this.validateResponse(response);
+        try {
+          return this.validateResponse(response);
+        } catch (validationError) {
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[API] Validation error:', {
+              url: config.url,
+              response: response?.data,
+              error: validationError.message,
+            });
+          }
+          // Wrap validation error
+          const wrappedError = normalizeError({
+            message: validationError.message || 'Invalid API response format',
+            status: response?.status || 200,
+            data: response?.data,
+          });
+          throw wrappedError;
+        }
       } catch (error) {
         lastError = error;
         
@@ -254,8 +370,35 @@ class APIWrapper {
    * Validate and normalize response
    */
   validateResponse(response) {
-    if (!response || !response.data) {
-      throw new Error('Invalid response structure');
+    if (!response) {
+      throw new Error('Invalid response: response is null or undefined');
+    }
+    
+    // eslint-disable-next-line no-undef
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API] validateResponse - Input:', {
+        hasResponse: !!response,
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        status: response.data?.status,
+      });
+    }
+    
+    // Handle case where response.data might not exist
+    if (!response.data) {
+      // If response itself is the data (direct data format)
+      if (typeof response === 'object' && !response.status && !response.headers) {
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[API] validateResponse - Direct data format');
+        }
+        return {
+          ...response,
+          data: response,
+        };
+      }
+      throw new Error('Invalid response structure: missing data field');
     }
     
     // Normalize response data
@@ -264,15 +407,81 @@ class APIWrapper {
     // If response has status field, validate it
     if (data.status !== undefined) {
       if (data.status === 'success') {
-        return {
+        // Extract data.data if exists, otherwise use data itself but remove status field
+        let extractedData;
+        
+        if (data.data !== undefined) {
+          // Normal case: { status: 'success', data: {...} }
+          extractedData = data.data;
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[API] validateResponse - Extracted data.data:', {
+              hasData: !!extractedData,
+              dataType: typeof extractedData,
+              isArray: Array.isArray(extractedData),
+              length: Array.isArray(extractedData) ? extractedData.length : (extractedData ? Object.keys(extractedData).length : 0),
+              dataKeys: Array.isArray(extractedData) ? `Array(${extractedData.length})` : (extractedData ? Object.keys(extractedData) : []),
+              firstItem: Array.isArray(extractedData) && extractedData.length > 0 ? extractedData[0] : null,
+            });
+          }
+        } else {
+          // Edge case: { status: 'success', ...otherFields }
+          // Remove status field and use the rest
+          const { status, ...dataWithoutStatus } = data;
+          extractedData = dataWithoutStatus;
+          // eslint-disable-next-line no-undef
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[API] validateResponse - Removed status field, using rest:', {
+              hasData: !!extractedData,
+              dataType: typeof extractedData,
+              dataKeys: extractedData ? Object.keys(extractedData) : [],
+            });
+          }
+        }
+        
+        // Return response with extracted data
+        const normalizedResponse = {
           ...response,
-          data: data.data !== undefined ? data.data : data,
+          data: extractedData,
         };
+        
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[API] validateResponse - Output:', {
+            hasData: !!normalizedResponse.data,
+            dataType: typeof normalizedResponse.data,
+            isArray: Array.isArray(normalizedResponse.data),
+            length: Array.isArray(normalizedResponse.data) ? normalizedResponse.data.length : (normalizedResponse.data ? Object.keys(normalizedResponse.data).length : 0),
+            dataKeys: Array.isArray(normalizedResponse.data) ? `Array(${normalizedResponse.data.length})` : (normalizedResponse.data ? Object.keys(normalizedResponse.data) : []),
+            firstItem: Array.isArray(normalizedResponse.data) && normalizedResponse.data.length > 0 ? normalizedResponse.data[0] : null,
+          });
+        }
+        
+        return normalizedResponse;
       } else {
-        throw new Error(data.message || 'API request failed');
+        // Status is not 'success', throw error with message
+        const errorMessage = data.message || data.error || 'API request failed';
+        // eslint-disable-next-line no-undef
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[API] validateResponse - Error status:', {
+            status: data.status,
+            message: errorMessage,
+            data: data,
+          });
+        }
+        const error = new Error(errorMessage);
+        error.response = response;
+        error.status = data.status;
+        throw error;
       }
     }
     
+    // No status field - assume it's direct data format
+    // This handles cases where API returns data directly without status wrapper
+    // eslint-disable-next-line no-undef
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API] validateResponse - No status field, returning as-is');
+    }
     return response;
   }
   

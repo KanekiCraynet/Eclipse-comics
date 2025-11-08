@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, memo } from 'react';
 import PropTypes from 'prop-types';
-import { safeImageUrl } from '../../utils/apiHelpers';
+import { safeImageUrl, generateWebPUrl, generateBlurPlaceholder, checkWebPSupport } from '../../utils/apiHelpers';
 
 /**
- * LazyImage component for progressive image loading
+ * LazyImage component for progressive image loading with WebP support and picture element
  */
 const LazyImage = ({
   src,
@@ -14,16 +14,41 @@ const LazyImage = ({
   onLoad,
   onError,
   loading = 'lazy',
+  usePicture = true,
+  useWebP = true,
   ...props
 }) => {
   const [imageSrc, setImageSrc] = useState(placeholder || fallback);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [webPSupported, setWebPSupported] = useState(false);
+  const [blurPlaceholder, setBlurPlaceholder] = useState(null);
   const imgRef = useRef(null);
+  const containerRef = useRef(null);
   const observerRef = useRef(null);
 
   // Validate and normalize image URL
   const normalizedSrc = safeImageUrl(src, fallback);
+  const webPUrl = useWebP && normalizedSrc ? generateWebPUrl(normalizedSrc) : null;
+
+  // Check WebP support on mount
+  useEffect(() => {
+    if (useWebP && webPUrl) {
+      checkWebPSupport().then(setWebPSupported);
+    }
+  }, [useWebP, webPUrl]);
+
+  // Generate blur placeholder
+  useEffect(() => {
+    if (normalizedSrc && normalizedSrc !== fallback && !placeholder) {
+      try {
+        const blur = generateBlurPlaceholder(normalizedSrc);
+        setBlurPlaceholder(blur);
+      } catch (error) {
+        console.error('[LazyImage] Error generating blur placeholder:', error);
+      }
+    }
+  }, [normalizedSrc, fallback, placeholder]);
 
   useEffect(() => {
     // If no IntersectionObserver support, load immediately
@@ -39,8 +64,9 @@ const LazyImage = ({
           if (entry.isIntersecting) {
             // Image is in viewport, start loading
             setImageSrc(normalizedSrc);
-            if (observerRef.current && imgRef.current) {
-              observerRef.current.unobserve(imgRef.current);
+            const elementToUnobserve = containerRef.current || imgRef.current;
+            if (observerRef.current && elementToUnobserve) {
+              observerRef.current.unobserve(elementToUnobserve);
             }
           }
         });
@@ -51,16 +77,17 @@ const LazyImage = ({
       }
     );
 
-    // Observe the image element
-    const currentImgRef = imgRef.current;
-    if (currentImgRef) {
-      observerRef.current.observe(currentImgRef);
+    // Observe the container element (works for both picture and img)
+    const elementToObserve = containerRef.current || imgRef.current;
+    
+    if (elementToObserve) {
+      observerRef.current.observe(elementToObserve);
     }
 
     // Cleanup
     return () => {
-      if (observerRef.current && currentImgRef) {
-        observerRef.current.unobserve(currentImgRef);
+      if (observerRef.current && elementToObserve) {
+        observerRef.current.unobserve(elementToObserve);
       }
     };
   }, [normalizedSrc]);
@@ -94,8 +121,59 @@ const LazyImage = ({
     }
   }, [loading, normalizedSrc]);
 
+  // Determine which placeholder to use
+  const displayPlaceholder = placeholder || blurPlaceholder || fallback;
+
+  // Render with picture element if WebP is supported and usePicture is true
+  if (usePicture && webPSupported && webPUrl && normalizedSrc !== fallback) {
+    return (
+      <div ref={containerRef} className={`relative ${className}`} {...props}>
+        <picture>
+          {/* WebP source for modern browsers */}
+          <source srcSet={webPUrl} type="image/webp" />
+          {/* Fallback to original format */}
+          <source srcSet={normalizedSrc} type="image/jpeg" />
+          <img
+            ref={imgRef}
+            src={imageSrc}
+            alt={alt}
+            loading={loading}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={`transition-opacity duration-300 ${
+              isLoading ? 'opacity-0' : 'opacity-100'
+            } ${hasError ? 'opacity-50' : ''}`}
+            style={{
+              width: '100%',
+              height: 'auto',
+            }}
+          />
+        </picture>
+        {/* Placeholder overlay with blur effect */}
+        {isLoading && displayPlaceholder && displayPlaceholder !== fallback && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center pointer-events-none"
+            style={{
+              backgroundImage: `url(${displayPlaceholder})`,
+              filter: 'blur(10px)',
+              transform: 'scale(1.1)',
+              opacity: 0.8,
+            }}
+          />
+        )}
+        {/* Loading skeleton */}
+        {isLoading && (!displayPlaceholder || displayPlaceholder === fallback) && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-800 pointer-events-none">
+            <div className="animate-pulse bg-gray-700 w-full h-full" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback to regular img element
   return (
-    <div className={`relative ${className}`} {...props}>
+    <div ref={containerRef} className={`relative ${className}`} {...props}>
       <img
         ref={imgRef}
         src={imageSrc}
@@ -111,7 +189,20 @@ const LazyImage = ({
           height: 'auto',
         }}
       />
-      {isLoading && placeholder && (
+      {/* Placeholder overlay with blur effect */}
+      {isLoading && displayPlaceholder && displayPlaceholder !== fallback && (
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url(${displayPlaceholder})`,
+            filter: 'blur(10px)',
+            transform: 'scale(1.1)',
+            opacity: 0.8,
+          }}
+        />
+      )}
+      {/* Loading skeleton fallback */}
+      {isLoading && (!displayPlaceholder || displayPlaceholder === fallback) && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
           <div className="animate-pulse bg-gray-700 w-full h-full" />
         </div>
@@ -141,6 +232,8 @@ LazyImage.propTypes = {
   onLoad: PropTypes.func,
   onError: PropTypes.func,
   loading: PropTypes.oneOf(['lazy', 'eager']),
+  usePicture: PropTypes.bool,
+  useWebP: PropTypes.bool,
 };
 
 ImagePlaceholder.propTypes = {
