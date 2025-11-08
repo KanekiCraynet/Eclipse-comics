@@ -68,22 +68,30 @@ const ViewAll = ({ url }) => {
         <div className="py-2">
             <div className="grid grid-cols-3 gap-2">
                 {seriesList.map((komik, index) => {
-                    const thumbnail = safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail);
+                    const thumbnail = safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail || 'https://files.catbox.moe/hu8n6y.jpg');
                     const endpoint = safeEndpoint(komik.url || komik.link || komik.endpoint);
-                    const latestChapter = safeStringTrim(komik.latestChapter, 'N/A');
+                    const chapters = Array.isArray(komik.chapter) ? komik.chapter : [];
+                    const chapterCount = chapters.length;
+                    const latestChapter = safeStringTrim(komik.latestChapter || (chapters.length > 0 ? chapters[0]?.title : 'N/A'), 'N/A');
                     const title = safeStringTrim(komik.title, 'Untitled');
+                    const displayChapter = chapterCount > 0 ? `${chapterCount} Ch.` : `Ch. ${String(latestChapter).replace("Chapter","").trim()}`;
 
                     return (
                         <NavLink
-                            className="relative bg-cover bg-center inner-shadow-bottom w-full h-[170px] md:h-[100px] rounded-sm cursor-pointer overflow-hidden"
-                            style={{backgroundImage: `url(${thumbnail})`}}
+                            className="relative bg-cover bg-center inner-shadow-bottom w-full h-[170px] md:h-[200px] rounded-sm cursor-pointer overflow-hidden group"
+                            style={{
+                                backgroundImage: `url(${thumbnail})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
+                            }}
                             to={`/komik/${endpoint}`}
                             key={komik.endpoint || komik.link || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
-                                Ch. {String(latestChapter).replace("Chapter","").trim()}
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1 z-10">
+                                {displayChapter}
                             </span>
-                            <span className="absolute bottom-0 text-sm font-bold line-clamp-2 p-1">{title}</span>
+                            <span className="absolute bottom-0 left-0 right-0 text-sm font-bold line-clamp-2 p-2 text-white drop-shadow-lg z-10">{title}</span>
                         </NavLink>
                     );
                 })}

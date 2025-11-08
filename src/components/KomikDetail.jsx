@@ -155,29 +155,37 @@ const KomikDetail = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Gagal memuat detail komik</p>
-          <p className="text-gray-500 text-sm mb-4">{error}</p>
-          <button
-            onClick={refetch}
-            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
-          >
-            Coba Lagi
-          </button>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <p className="text-red-500 mb-2 text-lg font-semibold">Gagal memuat detail komik</p>
+          <p className="text-gray-400 text-sm mb-6">{error}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={refetch}
+              className="bg-my text-black font-medium px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+            >
+              Coba Lagi
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
+            >
+              Kembali
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!data) {
+  if (!data || !data.title) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Komik tidak ditemukan</p>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <p className="text-gray-400 mb-4 text-lg">Komik tidak ditemukan</p>
           <button
             onClick={() => navigate(-1)}
-            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+            className="bg-my text-black font-medium px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
           >
             Kembali
           </button>
@@ -242,115 +250,122 @@ const KomikDetail = () => {
   const chapters = Array.isArray(data?.chapter) ? data.chapter : [];
 
   return (
-    <div>
-      <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-2">
+    <div className="pb-4">
+      <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-4">
         <LazyImage
-          className="absolute top-0 w-screen h-52 blur-2xl"
+          className="absolute top-0 w-screen h-52 blur-2xl opacity-50"
           src={thumbnailUrl}
           alt={`${title} background`}
           loading="eager"
         />
-        <button className="absolute top-2 left-3 z-10" onClick={() => navigate(-1)}>
-          <FaArrowLeft className="text-xl" />
+        <button 
+          className="absolute top-2 left-3 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors" 
+          onClick={() => navigate(-1)}
+          aria-label="Kembali"
+        >
+          <FaArrowLeft className="text-xl text-white" />
         </button>
-        <div className="w-1/3 relative z-10">
+        <div className="w-1/3 max-w-[200px] relative z-10">
           <LazyImage
-            className="relative bg-cover bg-center w-full h-50 rounded-lg overflow-hidden"
+            className="relative bg-cover bg-center w-full aspect-[3/4] rounded-lg overflow-hidden shadow-2xl"
             src={thumbnailUrl}
             alt={`${title} thumbnail`}
             loading="eager"
           />
         </div>
-        <span className="relative text-3xl font-extrabold z-10">{title}</span>
+        <span className="relative text-2xl md:text-3xl font-extrabold z-10 text-center px-4 line-clamp-2">{title}</span>
       </div>
       <div className="flex items-center gap-1 pl-3 pb-3">
-        <IoMdEye className="text-sm" />
-        <span className="text-xs">{chapterCount} Chapters</span>
+        <IoMdEye className="text-sm text-gray-400" />
+        <span className="text-xs text-gray-400">{chapterCount} Chapters</span>
       </div>
-      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
-          <FaCalendarDays className="text-sm text-white" />
-          <span>{data?.released || "Unknown"}</span>
+      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-2 overflow-x-auto">
+        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
+          <FaCalendarDays className="text-sm text-gray-300" />
+          <span className="text-gray-200">{data?.released || "Unknown"}</span>
         </div>
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
-          <FaUser className="text-sm text-white" />
-          <span>{data?.author || "Unknown"}</span>
+        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
+          <FaUser className="text-sm text-gray-300" />
+          <span className="text-gray-200">{data?.author || "Unknown"}</span>
         </div>
-
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1 rounded-full">
+        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
           <FaStar className="text-sm text-yellow-300" />
-          <span>{data?.rating ?? "N/A"}</span>
+          <span className="text-gray-200">{data?.rating ?? "N/A"}</span>
         </div>
       </div>
-      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-1">
+      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-2 overflow-x-auto">
         {(Array.isArray(data?.genre) ? data.genre : []).map((genre, index) => (
-          <div className="text-sm bg-[#212121] px-3.5 py-1 rounded-full" key={index}>
-            {genre?.title || genre}
+          <div className="text-sm bg-[#212121] px-3.5 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors" key={index}>
+            <span className="text-gray-200">{genre?.title || genre}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-center gap-2 px-7 py-10">
+      <div className="flex items-center justify-center gap-3 px-4 py-6">
         {isBookmark ?
           <button
-            className="flex items-center gap-5 bg-[#212121] hover:bg-[#171717] w-1/2 text-white p-3 rounded-full"
+            className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
             onClick={handleBookmark}
           >
-            <FaTrash className="text-xl text-red-600" />
-            <span className="text-lg text-white font-semibold">Remove</span>
+            <FaTrash className="text-lg text-red-500" />
+            <span className="text-base font-semibold">Remove</span>
           </button>
           :
           <button
-            className="flex items-center gap-5 bg-[#212121] hover:bg-[#171717] w-1/2 text-white p-3 rounded-full"
+            className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
             onClick={handleBookmark}
           >
-            <FaBookmark className="text-xl my" />
-            <span className="text-lg text-white font-semibold">Bookmark</span>
+            <FaBookmark className="text-lg text-my" />
+            <span className="text-base font-semibold">Bookmark</span>
           </button>
         }
         <button
           onClick={shareUrl}
-          className="flex items-center gap-5 bg-[#212121] hover:bg-[#171717] w-1/2 text-white px-3 py-3 rounded-full"
+          className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
         >
-          <FaPaperPlane className="text-xl my" />
-          <span className="text-lg font-semibold">Bagikan</span>
+          <FaPaperPlane className="text-lg text-my" />
+          <span className="text-base font-semibold">Bagikan</span>
         </button>
       </div>
-      <p className="text-sm px-3">{data?.description || "No description available"}</p>
+      <div className="px-4 pb-4">
+        <p className="text-sm text-gray-300 leading-relaxed">{data?.description || "No description available"}</p>
+      </div>
 
       {/* Chapter List */}
-      <div className="p-2">
-        <span className="py-2 text-2xl font-extrabold">Chapter List :</span>
+      <div className="px-4 py-2">
+        <span className="text-2xl font-extrabold">Chapter List</span>
       </div>
-      <div className="container max-h-[250px] flex flex-col overflow-y-auto gap-1 rounded-md p-2">
+      <div className="container max-h-[400px] flex flex-col overflow-y-auto gap-2 rounded-md px-4 pb-4">
         {chapters.length > 0 ? (
           chapters.map((chapter, index) => {
             const chapterEndpoint = safeEndpoint(chapter?.href || chapter?.url || "", "");
             return (
-              <div className="mt-1" key={index}>
-                <NavLink
-                  className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-bl-3xl rounded-tr-3xl hover:bg-[#171717]"
-                  to={`/chapter/${chapterEndpoint}`}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-bold">{chapter?.title || `Chapter ${index + 1}`}</span>
-                    <span className="text-sm">{chapter?.date || ""}</span>
-                  </div>
-                  <FaReadme className="text-1xl" />
-                </NavLink>
-              </div>
+              <NavLink
+                key={index}
+                className="flex items-center justify-between bg-[#212121] px-4 py-3 rounded-lg hover:bg-[#2a2a2a] transition-colors"
+                to={`/chapter/${chapterEndpoint}`}
+              >
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="font-semibold text-white truncate">{chapter?.title || `Chapter ${index + 1}`}</span>
+                  {chapter?.date && (
+                    <span className="text-xs text-gray-400 mt-0.5">{chapter.date}</span>
+                  )}
+                </div>
+                <FaReadme className="text-lg text-gray-400 ml-3 flex-shrink-0" />
+              </NavLink>
             );
           })
         ) : (
-          <div className="text-center text-gray-500 py-4">
-            <p>No chapters available</p>
+          <div className="text-center text-gray-400 py-8">
+            <p>Tidak ada chapter tersedia</p>
           </div>
         )}
       </div>
 
       {/* Comments Section moved below Chapter List */}
-      <div className="p-4 mt-6 bg-[#212121] rounded-lg mx-3 max-h-[600px] overflow-y-auto">
-
-        <div className="commentbox" />
+      <div className="px-4 mt-6 mb-4">
+        <div className="bg-[#212121] rounded-lg p-4 max-h-[600px] overflow-y-auto">
+          <div className="commentbox" />
+        </div>
       </div>
     </div>
   );

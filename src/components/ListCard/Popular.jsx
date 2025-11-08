@@ -58,12 +58,13 @@ const Popular = () => {
     // Merge popular data with detail data
     const enrichedData = useMemo(() => {
         if (!batchResults || batchResults.length === 0) {
-            // Return original data with defaults if batch fetch hasn't completed
+            // Return original data with image from popularData if batch fetch hasn't completed
             return comicsToFetch.map(komik => ({
                 ...komik,
-                thumbnail: '',
+                thumbnail: komik.image || komik.imageSrc || komik.thumbnail || '',
                 rating: '0',
                 latestChapter: 'N/A',
+                chapterCount: 0,
             }));
         }
 
@@ -71,12 +72,15 @@ const Popular = () => {
             if (!detailData) {
                 return {
                     ...komik,
-                    thumbnail: '',
+                    thumbnail: komik.image || komik.imageSrc || komik.thumbnail || '',
                     rating: '0',
                     latestChapter: 'N/A',
+                    chapterCount: 0,
                 };
             }
 
+            const chapters = Array.isArray(detailData?.chapter) ? detailData.chapter : [];
+            const chapterCount = chapters.length;
             const cleanChapter = extractChapter(
                 detailData?.chapter || detailData?.latestChapter,
                 'N/A'
@@ -86,9 +90,10 @@ const Popular = () => {
             return {
                 ...komik,
                 title: detailData?.title || komik.title || 'Untitled',
-                thumbnail: detailData?.thumbnail || '',
+                thumbnail: detailData?.thumbnail || komik.image || komik.imageSrc || komik.thumbnail || '',
                 rating: normalizedRating,
                 latestChapter: cleanChapter,
+                chapterCount: chapterCount,
             };
         });
     }, [batchResults, comicsToFetch]);
@@ -140,9 +145,10 @@ const Popular = () => {
             <div className="flex items-center scroll-page gap-2 py-2">
                 {data.map((komik, index) => {
                     const title = safeStringTrim(komik.title, 'Untitled');
-                    const thumbnail = safeImageUrl(komik.thumbnail || komik.imageSrc || komik.image);                                                           
+                    const thumbnail = safeImageUrl(komik.thumbnail || komik.imageSrc || komik.image || 'https://files.catbox.moe/hu8n6y.jpg');                                                           
                     const endpoint = safeEndpoint(komik.endpoint || komik.href || komik.link || komik.url);                                                     
                     const rating = extractRating(komik.rating, '0');
+                    const chapterCount = komik.chapterCount || (Array.isArray(komik.chapter) ? komik.chapter.length : 0);
                     const cleanChapter = extractChapter(
                         komik.latestChapter || komik.chapter,
                         'N/A'
@@ -150,24 +156,29 @@ const Popular = () => {
 
                     return (
                         <NavLink
-                            className="relative bg-cover inner-shadow-bottom w-auto min-w-[130px] md:min-w-[250px] h-[170px] md:h-[170px] rounded-lg cursor-pointer overflow-hidden"
+                            className="relative bg-cover bg-center inner-shadow-bottom w-auto min-w-[130px] md:min-w-[250px] h-[170px] md:h-[170px] rounded-lg cursor-pointer overflow-hidden group"
                             style={{
                                 backgroundImage: `url(${thumbnail})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
                                 boxShadow: 'inset 0 -40px 20px rgba(0, 0, 0, 0.9)'
                             }}
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
-                                Ch. {cleanChapter}
+                            {thumbnail && (
+                                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                            )}
+                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1 z-10">
+                                {chapterCount > 0 ? `${chapterCount} Ch.` : `Ch. ${cleanChapter}`}
                             </span>
-                            <div className="absolute bottom-0 left-0 p-1">
+                            <div className="absolute bottom-0 left-0 right-0 p-2 z-10">
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-1">
-                                        <FaStar className="text-yellow-300 text-xs z-50" />
-                                        <span className="text-white text-xs font-medium z-50">{rating.slice(0, 3)}</span>
+                                        <FaStar className="text-yellow-300 text-xs" />
+                                        <span className="text-white text-xs font-medium">{rating.slice(0, 3)}</span>
                                     </div>
-                                    <span className="text-white text-sm font-semibold line-clamp-2">{title}</span>
+                                    <span className="text-white text-sm font-semibold line-clamp-2 drop-shadow-lg">{title}</span>
                                 </div>
                             </div>
                         </NavLink>
