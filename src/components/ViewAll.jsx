@@ -37,7 +37,7 @@ const ViewAll = ({ url }) => {
                     <p className="text-gray-500 text-sm mb-4">{error}</p>
                     <button
                         onClick={refetch}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                     >
                         Coba Lagi
                     </button>
@@ -92,7 +92,7 @@ const ViewAll = ({ url }) => {
                             key={komik.endpoint || komik.link || index}
                         >
                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1 z-10">
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1 z-10">
                                 {displayChapter}
                             </span>
                             <span className="absolute bottom-0 left-0 right-0 text-sm font-bold line-clamp-2 p-2 text-white drop-shadow-lg z-10">{title}</span>
@@ -103,16 +103,16 @@ const ViewAll = ({ url }) => {
             <div className="flex items-center justify-center gap-2 py-4">
                 {page === 1 ? null : (
                     <button
-                        className="bg-my text-black font-medium px-2 py-1 rounded-lg"
+                        className="bg-blue-500 text-white font-medium px-2 py-1 rounded-lg"
                         onClick={() => setPage(page - 1)}
                     >
                         Prev
                     </button>
                 )}
-                <h3 className="bg-my text-black font-medium px-3 py-1 rounded-full">{page}</h3>
+                <h3 className="bg-blue-500 text-white font-medium px-3 py-1 rounded-full">{page}</h3>
                 {data?.pagination && Array.isArray(data.pagination) && data.pagination.length > 0 ? (
                     <button
-                        className="bg-my text-black font-medium px-2 py-1 rounded-lg"
+                        className="bg-blue-500 text-white font-medium px-2 py-1 rounded-lg"
                         onClick={() => setPage(page + 1)}
                     >
                         Next

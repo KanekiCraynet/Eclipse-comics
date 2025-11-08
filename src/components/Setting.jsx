@@ -37,7 +37,7 @@ const Setting = () => {
                         onClick={() => updatePreference('readingMode', READING_MODES.WEBTOON)}
                         className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                             preferences.readingMode === READING_MODES.WEBTOON
-                                ? 'bg-my text-black'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-[#212121] hover:bg-[#171717]'
                         }`}
                     >
@@ -51,7 +51,7 @@ const Setting = () => {
                         onClick={() => updatePreference('readingMode', READING_MODES.MANGA)}
                         className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                             preferences.readingMode === READING_MODES.MANGA
-                                ? 'bg-my text-black'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-[#212121] hover:bg-[#171717]'
                         }`}
                     >
@@ -65,7 +65,7 @@ const Setting = () => {
                         onClick={() => updatePreference('readingMode', READING_MODES.LONG_STRIP)}
                         className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                             preferences.readingMode === READING_MODES.LONG_STRIP
-                                ? 'bg-my text-black'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-[#212121] hover:bg-[#171717]'
                         }`}
                     >
@@ -86,7 +86,7 @@ const Setting = () => {
                         onClick={() => updatePreference('readingDirection', READING_DIRECTIONS.LTR)}
                         className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg transition-colors ${
                             preferences.readingDirection === READING_DIRECTIONS.LTR
-                                ? 'bg-my text-black'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-[#212121] hover:bg-[#171717]'
                         }`}
                     >
@@ -97,7 +97,7 @@ const Setting = () => {
                         onClick={() => updatePreference('readingDirection', READING_DIRECTIONS.RTL)}
                         className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg transition-colors ${
                             preferences.readingDirection === READING_DIRECTIONS.RTL
-                                ? 'bg-my text-black'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-[#212121] hover:bg-[#171717]'
                         }`}
                     >
@@ -117,7 +117,7 @@ const Setting = () => {
                             onClick={() => updatePreference('imageQuality', quality)}
                             className={`p-3 rounded-lg transition-colors text-left ${
                                 preferences.imageQuality === quality
-                                    ? 'bg-my text-black'
+                                    ? 'bg-blue-500 text-white'
                                     : 'bg-[#212121] hover:bg-[#171717]'
                             }`}
                         >

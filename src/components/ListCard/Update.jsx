@@ -34,7 +34,7 @@ const Update = () => {
                         <p className="text-red-500 text-center mb-2">{error}</p>
                         <button
                             onClick={refetch}
-                            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                            className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                         >
                             Coba Lagi
                         </button>
@@ -74,7 +74,7 @@ const Update = () => {
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1">
                                 Ch. {cleanChapter}
                             </span>
                             <span className="absolute bottom-0 text-sm font-bold line-clamp-2 p-1">{title}</span>

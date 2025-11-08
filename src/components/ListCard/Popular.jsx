@@ -123,7 +123,7 @@ const Popular = () => {
                     <p className="text-red-500 text-center mb-2">{error}</p>
                     <button
                         onClick={refetchPopular}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                     >
                         Try Again
                     </button>
@@ -173,7 +173,7 @@ const Popular = () => {
                             {thumbnail && (
                                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                             )}
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1 z-10">
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1 z-10">
                                 {chapterCount > 0 ? `${chapterCount} Ch.` : `Ch. ${cleanChapter}`}
                             </span>
                             <div className="absolute bottom-0 left-0 right-0 p-2 z-10">

@@ -5,6 +5,7 @@ import { safeParseJSON } from './storageHelpers';
  * Extract data from API response consistently
  * Handles both axios response format and direct data format
  * API wrapper returns: { data: { status: 'success', data: [...] } }
+ * After API wrapper validateResponse: { data: [...] } (already extracted)
  * This function extracts the actual data from the response
  */
 export const extractApiData = (response) => {
@@ -13,24 +14,25 @@ export const extractApiData = (response) => {
   }
 
   // If response is already the data (not wrapped in axios response)
-  if (!response.data && !response.status) {
+  // Check if it's a plain object without axios response structure
+  if (typeof response === 'object' && !response.data && !response.status && !response.headers) {
     return response;
   }
 
   // Handle axios response format: response.data
   const responseData = response.data || response;
 
-  // If responseData has status field, it's from API wrapper
-  if (responseData.status !== undefined) {
+  // If responseData has status field, it's from raw API (before wrapper normalization)
+  if (responseData && typeof responseData === 'object' && responseData.status !== undefined) {
     if (responseData.status === 'success') {
-      // API wrapper format: { status: 'success', data: [...] }
+      // API format: { status: 'success', data: [...] }
       return responseData.data !== undefined ? responseData.data : responseData;
     } else {
       throw new Error(responseData.message || 'API request failed');
     }
   }
 
-  // Direct data format (already extracted)
+  // Direct data format (already extracted by API wrapper or direct response)
   return responseData;
 };
 

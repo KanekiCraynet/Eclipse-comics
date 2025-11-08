@@ -34,7 +34,7 @@ const Viewed = () => {
                         <p className="text-red-500 text-center mb-2">{error}</p>
                         <button
                             onClick={refetch}
-                            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                            className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                         >
                             Coba Lagi
                         </button>
@@ -69,7 +69,7 @@ const Viewed = () => {
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {cleanChapter}</span>
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1">Ch. {cleanChapter}</span>
                             <div className="absolute top-[76px] left-0 flex items-center gap-1 p-1">
                                 <FaStar className="text-yellow-300 text-xs z-50" />
                                 <span className="text-white text-xs font-medium z-50">{rating.slice(0,3)}</span>

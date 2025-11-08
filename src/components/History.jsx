@@ -41,29 +41,29 @@ const History = () => {
             <div className="flex items-center justify-center">
                 <span className="text-2xl font-extrabold">History</span>
             </div>
-                <div className="grid grid-cols-3 gap-2 py-10">
+            <div className="grid grid-cols-3 gap-3 py-4">
                 {dataHistory.reverse().map((komik,index) => (
-                <div className="flex flex-col" key={index}>
-                     <NavLink
-    className="relative bg-cover bg-center w-full h-[170px] md:h-[100px] cursor-pointer overflow-hidden"
-    style={{
-      backgroundImage: `url(${komik.imageSrc})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      boxShadow: 'inset 0 -40px 20px rgba(0, 0, 0, 0.8)', // Mengurangi opasitas shadow
-      borderRadius: '8px' // Menjaga border-radius tetap
-    }}
-    to={`/chapter/${komik.link}`}
-  >
-                        <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {komik.link.split("chapter-")[1]}</span>
-                        <div className="absolute top-[107px] left-0 flex items-center gap-1 p-1">
-                            <FaStar className="text-yellow-300 text-xs z-50" />
-                            <span className="text-white text-xs font-medium z-50">{komik.rating.slice(0,3)}</span>
-                        </div>
-                        <span className="absolute bottom-0 text-white text-sm font-semibold line-clamp-2 p-1">{komik.title}</span>
-                    </NavLink>
-                    <span className="text-xs font-bold p-1">{convertTime(komik.date)}</span>
-                </div>
+                    <div className="flex flex-col" key={index}>
+                        <NavLink
+                            className="relative bg-cover bg-center w-full h-[170px] md:h-[100px] cursor-pointer overflow-hidden rounded-lg"
+                            style={{
+                                backgroundImage: `url(${komik.imageSrc})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                boxShadow: 'inset 0 -40px 20px rgba(0, 0, 0, 0.8)',
+                                borderRadius: '8px'
+                            }}
+                            to={`/chapter/${komik.link}`}
+                        >
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1">Ch. {komik.link?.split("chapter-")[1] || komik.link?.split("-chapter")[1] || "N/A"}</span>
+                            <div className="absolute top-[107px] left-0 flex items-center gap-1 p-1">
+                                <FaStar className="text-yellow-300 text-xs z-50" />
+                                <span className="text-white text-xs font-medium z-50">{komik.rating?.slice(0,3) || "0"}</span>
+                            </div>
+                            <span className="absolute bottom-0 text-white text-sm font-semibold line-clamp-2 p-1">{komik.title}</span>
+                        </NavLink>
+                        <span className="text-xs text-gray-400 font-medium p-1 mt-1">{convertTime(komik.date)}</span>
+                    </div>
                 ))}
             </div>
         </div>

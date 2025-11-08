@@ -139,7 +139,7 @@ const Populer = () => {
                         <p className="text-red-500 text-center mb-2">{error}</p>
                         <button
                             onClick={refetchPopular}
-                            className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"                                                   
+                            className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"                                                   
                         >
                             Coba Lagi
                         </button>
@@ -177,7 +177,7 @@ const Populer = () => {
                             to={`/komik/${endpoint}`}
                             key={endpoint || index}
                         >
-                            <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">Ch. {cleanChapter}</span>                                                       
+                            <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1">Ch. {cleanChapter}</span>                                                       
                             <div className="absolute bottom-0 left-0 p-1">
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-1">

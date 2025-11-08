@@ -118,7 +118,7 @@ const ChapterDetail = () => {
                     <p className="text-gray-500 text-sm mb-4">{error}</p>
                     <button
                         onClick={refetchChapter}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                     >
                         Coba Lagi
                     </button>
@@ -134,7 +134,7 @@ const ChapterDetail = () => {
                     <p className="text-gray-500 mb-4">Chapter tidak ditemukan</p>
                     <button
                         onClick={() => navigate(-1)}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                     >
                         Kembali
                     </button>
@@ -150,7 +150,7 @@ const ChapterDetail = () => {
                     <p className="text-gray-500 mb-4">Detail komik tidak ditemukan</p>
                     <button
                         onClick={() => navigate(-1)}
-                        className="bg-my text-black font-medium px-4 py-2 rounded-lg hover:bg-opacity-80"
+                        className="bg-blue-500 text-white font-medium px-4 py-2 rounded-lg hover:bg-blue-600"
                     >
                         Kembali
                     </button>
@@ -328,7 +328,7 @@ const ChapterDetail = () => {
                     </button>
                     <button
                         onClick={() => setIsAutoScroll(!isAutoScroll)}
-                        className={`p-2 hover:bg-[#171717] rounded ${isAutoScroll ? 'bg-my text-black' : ''}`}
+                        className={`p-2 hover:bg-[#171717] rounded ${isAutoScroll ? 'bg-blue-500 text-white' : ''}`}
                         aria-label="Auto scroll"
                     >
                         {isAutoScroll ? <FaPause className="text-sm" /> : <FaPlay className="text-sm" />}
@@ -367,10 +367,10 @@ const ChapterDetail = () => {
                     <span className="font-extrabold p-2">Mode Baca</span>
                     {/* Reading Progress Indicator */}
                     <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0 w-32 h-1 bg-[#212121] rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-my transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
+                    <div 
+                        className="h-full bg-blue-500 transition-all duration-300"
+                        style={{ width: `${progress}%` }}
+                    />
                     </div>
                     <div className="absolute right-4 flex items-center gap-2">
                         <button

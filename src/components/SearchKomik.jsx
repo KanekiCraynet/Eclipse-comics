@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { FaSearch } from "react-icons/fa"
+import { FaSearch, FaStar } from "react-icons/fa"
 import { useDebounceSearch } from "@/hooks/useDebounceSearch"
 import { KomikGridSkeleton } from "@/components/ui/LoadingSkeleton"
 import { safeStringTrim, safeImageUrl, safeEndpoint } from "@/utils/apiHelpers"
@@ -77,6 +77,7 @@ const SearchKomik = () => {
                             const thumbnail = safeImageUrl(komik.image || komik.imageSrc)
                             const endpoint = safeEndpoint(komik.url || komik.endpoint)
                             const latestChapter = safeStringTrim(komik.latestChapter, 'N/A')
+                            const rating = komik.rating || komik.score || '0'
 
                             return (
                                 <NavLink
@@ -85,9 +86,13 @@ const SearchKomik = () => {
                                     to={`/komik/${endpoint}`}
                                     key={komik.endpoint || index}
                                 >
-                                    <span className="absolute top-0 left-0 bg-my text-black text-xs font-bold rounded-br-xl px-2 py-1">
+                                    <span className="absolute top-0 left-0 bg-blue-500 text-white text-xs font-bold rounded-br-xl px-2 py-1">
                                         Ch. {latestChapter.replace("Chapter", "").trim()}
                                     </span>
+                                    <div className="absolute top-[107px] left-0 flex items-center gap-1 p-1">
+                                        <FaStar className="text-yellow-300 text-xs z-50" />
+                                        <span className="text-white text-xs font-medium z-50">{rating}</span>
+                                    </div>
                                     <span className="absolute bottom-0 text-sm font-bold line-clamp-2 p-1">{title}</span>
                                 </NavLink>
                             )

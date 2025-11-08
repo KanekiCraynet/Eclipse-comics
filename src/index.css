@@ -7,20 +7,21 @@
 }
 
 .nav-links.active {
-    margin-bottom: 10px;
-    color: #000000;
- }
+    color: #3b82f6;
+}
 
 .nav-links.active::before {
     content: "";
     position: absolute;
     bottom: -15%;
-    left: 0px;
-    width: 52px;
-    height: 52px;
-    background-color: #CFFF2B;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    background-color: #3b82f6;
     border-radius: 50%;
     z-index: -1;
+    opacity: 0.2;
 }
   
 .scroll-page {
@@ -65,11 +66,11 @@
 }
 
 .my {
-  color: #CFFF2B;
+  color: #3b82f6;
 }
 
 .bg-my {
-  background-color: #CFFF2B;
+  background-color: #3b82f6;
 }
 
 /* Smooth transitions */
@@ -101,7 +102,7 @@
 /* Focus styles for accessibility */
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #CFFF2B;
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 

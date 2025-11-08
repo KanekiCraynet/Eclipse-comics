@@ -23,7 +23,7 @@ const KomikDetail = () => {
   
   // Use unified hook with caching
   // Data is already extracted by useKomikcastAPI using extractApiData
-  const { data, loading, error, refetch } = useKomikcastAPI(
+  const { data: rawData, loading, error, refetch } = useKomikcastAPI(
     () => komikcastAPI.getDetail(komik),
     {
       cacheKey: `komik_detail_${komik}`,
@@ -32,6 +32,20 @@ const KomikDetail = () => {
       skip: !komik || komik.trim() === '', // Skip API call if endpoint is invalid
     }
   );
+
+  // Debug logging (only in development)
+  useEffect(() => {
+    if (rawData && process.env.NODE_ENV === 'development') {
+      console.log('[KomikDetail] Raw data received:', rawData);
+      console.log('[KomikDetail] Data keys:', Object.keys(rawData || {}));
+      console.log('[KomikDetail] Has title:', !!rawData?.title);
+    }
+  }, [rawData]);
+
+  // Normalize data - handle different response formats
+  // API returns: { status: "success", data: { title: "...", ... } }
+  // After extractApiData, we should have: { title: "...", ... }
+  const data = rawData && typeof rawData === 'object' ? rawData : null;
   
   const commentBoxRef = useRef(null);
   const scriptRef = useRef(null);
@@ -162,7 +176,7 @@ const KomikDetail = () => {
           <div className="flex gap-3 justify-center">
             <button
               onClick={refetch}
-              className="bg-my text-black font-medium px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+              className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
             >
               Coba Lagi
             </button>
@@ -178,17 +192,38 @@ const KomikDetail = () => {
     );
   }
 
-  if (!data || !data.title) {
+  // Check if data is valid - handle different response structures
+  const hasValidData = data && (
+    data.title || 
+    data.name || 
+    (typeof data === 'object' && Object.keys(data).length > 0)
+  );
+
+  if (!hasValidData && !loading) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[KomikDetail] Invalid data structure:', data);
+      console.warn('[KomikDetail] Raw data:', rawData);
+      console.warn('[KomikDetail] Endpoint:', komik);
+    }
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <p className="text-gray-400 mb-4 text-lg">Komik tidak ditemukan</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="bg-my text-black font-medium px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
-          >
-            Kembali
-          </button>
+          <p className="text-gray-500 text-sm mb-4">Endpoint: {komik}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={refetch}
+              className="bg-blue-500 text-white font-medium px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Coba Lagi
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="bg-[#212121] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#171717] transition-colors"
+            >
+              Kembali
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -245,19 +280,21 @@ const KomikDetail = () => {
     }
   };
 
-  const thumbnailUrl = getThumbnailUrl(data?.thumbnail);
-  const title = safeStringTrim(data?.title?.replace("Bahasa Indonesia", ""), "Untitled");
-  const chapters = Array.isArray(data?.chapter) ? data.chapter : [];
+  // Extract data with fallbacks for different response structures
+  const thumbnailUrl = getThumbnailUrl(data?.thumbnail || data?.image || data?.imageSrc);
+  const title = safeStringTrim(
+    (data?.title || data?.name || data?.komikTitle || "").replace("Bahasa Indonesia", ""), 
+    "Untitled"
+  );
+  const chapters = Array.isArray(data?.chapter) 
+    ? data.chapter 
+    : Array.isArray(data?.chapters) 
+      ? data.chapters 
+      : [];
 
   return (
     <div className="pb-4">
-      <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-10 pb-4">
-        <LazyImage
-          className="absolute top-0 w-screen h-52 blur-2xl opacity-50"
-          src={thumbnailUrl}
-          alt={`${title} background`}
-          loading="eager"
-        />
+      <div className="relative flex flex-col items-center justify-center gap-3 px-2 pt-4 pb-4">
         <button 
           className="absolute top-2 left-3 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors" 
           onClick={() => navigate(-1)}
@@ -265,7 +302,7 @@ const KomikDetail = () => {
         >
           <FaArrowLeft className="text-xl text-white" />
         </button>
-        <div className="w-1/3 max-w-[200px] relative z-10">
+        <div className="w-1/2 max-w-[250px] relative z-10 mt-8">
           <LazyImage
             className="relative bg-cover bg-center w-full aspect-[3/4] rounded-lg overflow-hidden shadow-2xl"
             src={thumbnailUrl}
@@ -273,66 +310,71 @@ const KomikDetail = () => {
             loading="eager"
           />
         </div>
-        <span className="relative text-2xl md:text-3xl font-extrabold z-10 text-center px-4 line-clamp-2">{title}</span>
+        <span className="relative text-2xl md:text-3xl font-extrabold z-10 text-center px-4 line-clamp-2 mt-2">{title}</span>
       </div>
-      <div className="flex items-center gap-1 pl-3 pb-3">
+      <div className="flex items-center gap-1 pl-4 pb-3">
         <IoMdEye className="text-sm text-gray-400" />
-        <span className="text-xs text-gray-400">{chapterCount} Chapters</span>
+        <span className="text-xs text-gray-400">Dibaca {chapterCount} orang</span>
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-2 overflow-x-auto">
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
-          <FaCalendarDays className="text-sm text-gray-300" />
-          <span className="text-gray-200">{data?.released || "Unknown"}</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
-          <FaUser className="text-sm text-gray-300" />
-          <span className="text-gray-200">{data?.author || "Unknown"}</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
-          <FaStar className="text-sm text-yellow-300" />
-          <span className="text-gray-200">{data?.rating ?? "N/A"}</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-2 overflow-x-auto">
-        {(Array.isArray(data?.genre) ? data.genre : []).map((genre, index) => (
-          <div className="text-sm bg-[#212121] px-3.5 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors" key={index}>
-            <span className="text-gray-200">{genre?.title || genre}</span>
+        {(data?.released || data?.releaseDate || data?.year) && (
+          <div className="text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
+            <span className="text-gray-200">{data.released || data.releaseDate || data.year}</span>
           </div>
-        ))}
+        )}
+        {(data?.author || data?.artist || data?.writer) && (
+          <div className="text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
+            <span className="text-gray-200">{data.author || data.artist || data.writer}</span>
+          </div>
+        )}
+        {(data?.rating || data?.score) && (
+          <div className="flex items-center gap-1 text-sm bg-[#212121] px-3 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors">
+            <FaStar className="text-sm text-yellow-300" />
+            <span className="text-gray-200">{data.rating || data.score}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 whitespace-nowrap scroll-page px-2 py-2 overflow-x-auto">
+        {(() => {
+          const genres = Array.isArray(data?.genre) 
+            ? data.genre 
+            : Array.isArray(data?.genres) 
+              ? data.genres 
+              : typeof data?.genre === 'string' 
+                ? data.genre.split(',').map(g => g.trim())
+                : [];
+          return genres.map((genre, index) => (
+            <div className="text-sm bg-[#212121] px-3.5 py-1.5 rounded-full hover:bg-[#2a2a2a] transition-colors" key={index}>
+              <span className="text-gray-200">{genre?.title || genre?.name || genre}</span>
+            </div>
+          ));
+        })()}
       </div>
       <div className="flex items-center justify-center gap-3 px-4 py-6">
-        {isBookmark ?
-          <button
-            className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
-            onClick={handleBookmark}
-          >
-            <FaTrash className="text-lg text-red-500" />
-            <span className="text-base font-semibold">Remove</span>
-          </button>
-          :
-          <button
-            className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
-            onClick={handleBookmark}
-          >
-            <FaBookmark className="text-lg text-my" />
-            <span className="text-base font-semibold">Bookmark</span>
-          </button>
-        }
+        <button
+          className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-lg transition-colors"
+          onClick={handleBookmark}
+        >
+          <FaBookmark className={`text-lg ${isBookmark ? 'text-red-500' : 'text-blue-500'}`} />
+          <span className="text-base font-semibold">{isBookmark ? 'Remove' : 'Bookmark'}</span>
+        </button>
         <button
           onClick={shareUrl}
-          className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-full transition-colors"
+          className="flex items-center justify-center gap-3 bg-[#212121] hover:bg-[#2a2a2a] w-1/2 text-white p-3 rounded-lg transition-colors"
         >
-          <FaPaperPlane className="text-lg text-my" />
+          <FaPaperPlane className="text-lg text-blue-500" />
           <span className="text-base font-semibold">Bagikan</span>
         </button>
       </div>
       <div className="px-4 pb-4">
-        <p className="text-sm text-gray-300 leading-relaxed">{data?.description || "No description available"}</p>
+        <p className="text-sm text-gray-300 leading-relaxed">
+          {data?.description || data?.synopsis || data?.summary || "No description available"}
+        </p>
       </div>
 
       {/* Chapter List */}
       <div className="px-4 py-2">
-        <span className="text-2xl font-extrabold">Chapter List</span>
+        <span className="text-xl font-extrabold">Chapter List</span>
       </div>
       <div className="container max-h-[400px] flex flex-col overflow-y-auto gap-2 rounded-md px-4 pb-4">
         {chapters.length > 0 ? (

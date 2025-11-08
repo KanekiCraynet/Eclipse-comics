@@ -20,7 +20,7 @@ const App = () => {
 
     const shouldShowBottomNavBar = () => {
         // Paths where bottom navbar should be shown
-        const pathsToShowNavbar = ["/", "/info", "/bookmark", "/history", "/setting"]
+        const pathsToShowNavbar = ["/", "/info", "/bookmark", "/history", "/search"]
         return (
             pathsToShowNavbar.some((path) => location.pathname.startsWith(path)) ||
             location.pathname.startsWith("/genres/")
