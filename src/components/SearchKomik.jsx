@@ -191,9 +191,9 @@ const SearchKomik = () => {
                     <div className="grid grid-cols-3 gap-2">
                         {data.seriesList.map((komik, index) => {
                             const title = safeStringTrim(komik.title, 'Untitled')
-                            const thumbnail = safeImageUrl(komik.image || komik.imageSrc)
-                            const endpoint = safeEndpoint(komik.url || komik.endpoint)
-                            const latestChapter = safeStringTrim(komik.latestChapter, 'N/A')
+                            const thumbnail = safeImageUrl(komik.thumbnail || komik.image || komik.imageSrc)
+                            const endpoint = safeEndpoint(komik.endpoint || komik.url || komik.href)
+                            const latestChapter = safeStringTrim(komik.latestChapter || komik.chapter, 'N/A')
                             const rating = komik.rating || komik.score || '0'
 
                             return (

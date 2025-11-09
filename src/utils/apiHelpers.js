@@ -500,7 +500,7 @@ export const normalizeKomikData = (komik) => {
   
   return {
     title: safeStringTrim(komik.title || komik.name, 'Untitled'),
-    endpoint: safeEndpoint(komik.endpoint || komik.link || komik.url, ''),
+    endpoint: safeEndpoint(komik.endpoint || komik.link || komik.url || komik.href, ''),
     thumbnail: safeImageUrl(komik.image || komik.imageSrc || komik.thumbnail),
     rating: safeNumber(komik.rating, 0),
     author: safeStringTrim(komik.author, 'Unknown'),
@@ -508,7 +508,7 @@ export const normalizeKomikData = (komik) => {
     description: safeStringTrim(komik.description || komik.synopsis, ''),
     genre: Array.isArray(komik.genre) ? komik.genre : safeStringSplit(komik.genre || komik.genres),
     chapter: komik.chapter || komik.chapters || [],
-    latestChapter: safeStringTrim(komik.latestChapter || komik.chapter?.[0]?.title, 'N/A'),
+    latestChapter: safeStringTrim(komik.latestChapter || komik.chapter?.[0]?.title || komik.chapter, 'N/A'),
   };
 };
 
